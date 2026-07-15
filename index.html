@@ -536,6 +536,8 @@
         <button class="act" id="jAddBtn">Add</button>
         <button class="act" id="jAddRandom" title="Append 5 random decks from the current Database filter">+5 random from filter</button>
         <button class="act primary" id="jStart">Play journey ▸</button>
+        <button class="act" id="jShare"
+          title="Copy a link that loads this journey (deck list, order and settings) for anyone who opens it — results are not included">Share link</button>
         <button class="act" id="jReset" title="Keep the deck list, clear the recorded results">Reset results</button>
         <button class="act" id="jClear">Clear journey</button>
       </div>
@@ -2630,6 +2632,46 @@ document.getElementById('jNextBtn').onclick=()=>{
   const e=jNextEntry();
   if(e&&BYID.has(e.id))loadDeckById(e.id);
 };
+// ── journey sharing — the whole journey rides in the URL hash ──
+const ONLINE_URL='https://gilmisgav.github.io/deck-room/';
+document.getElementById('jShare').onclick=async()=>{
+  const err=document.getElementById('jErr');err.textContent='';
+  if(!JOURNEY.list.length){err.textContent='Add decks to the journey first.';return;}
+  const payload={ids:JOURNEY.list.map(e=>e.id),model:JOURNEY.model,
+    mFrom:JOURNEY.mFrom||1,mTo:JOURNEY.mTo||null,mRuns:JOURNEY.mRuns||100};
+  const enc=btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const local=['localhost','127.0.0.1'].includes(location.hostname);
+  const url=(local?ONLINE_URL:location.origin+location.pathname)+'#j='+enc;
+  try{
+    await navigator.clipboard.writeText(url);
+    document.getElementById('jBulkInfo').textContent=
+      'share link copied — anyone opening it gets this journey'+(local?' (link points to the online copy)':'');
+  }catch(e){prompt('Copy the share link:',url);}
+};
+// load a shared journey from the URL hash (works on the online copy too)
+(function(){
+  const m=location.hash.match(/#j=([A-Za-z0-9\-_]+)/);
+  if(!m)return;
+  try{
+    const p=JSON.parse(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')));
+    if(!Array.isArray(p.ids)||!p.ids.length)return;
+    if(JOURNEY.list.length&&
+      !confirm(`Load a shared journey with ${p.ids.length} decks?\n\nIt replaces your current journey (${JOURNEY.list.length} decks).`)){
+      history.replaceState(null,'',location.pathname+location.search);return;
+    }
+    const known=p.ids.map(String).filter(id=>BYID.has(id));
+    JOURNEY={list:known.map(id=>({id,res:null})),model:p.model||'book',
+      mFrom:p.mFrom||1,mTo:p.mTo||null,mRuns:p.mRuns||100};
+    jSave();
+    history.replaceState(null,'',location.pathname+location.search);
+    setTimeout(()=>{
+      switchView('journey');
+      if(known.length<p.ids.length)
+        document.getElementById('jErr').textContent=
+          `${p.ids.length-known.length} shared deck(s) are not in this database and were skipped.`;
+    },0);
+  }catch(e){}
+})();
 
 // ═══════════════════════════════════════════════════════ STRATEGY TAB
 const CODES_TOT=['H','S','D/H','D/S','R/H'];
