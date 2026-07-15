@@ -304,6 +304,12 @@
     padding:2px 7px;cursor:pointer;font-size:11px;font-family:var(--mono)}
   .jmini:hover{border-color:var(--gold);color:var(--gold)}
   #jChartWin,#jChartNet{padding:16px}
+  .jreq{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .jreq input{width:64px;padding:6px 8px}
+  .mhit{display:inline-block;min-width:20px;text-align:center;background:var(--gold);
+    color:#141006;border-radius:5px;font-weight:700;padding:1px 4px;font-size:11px}
+  #jMissions td,#jMissions th{padding:5px 7px}
   .view{display:none} .view.on{display:block}
   footer{margin-top:60px;font-family:var(--mono);font-size:10.5px;color:var(--muted);
     border-top:1px solid var(--line);padding-top:14px;letter-spacing:.05em}
@@ -536,6 +542,21 @@
     </div>
     <div class="err" id="jErr"></div>
     <p class="secnote">The player experiences these decks <b>in order (FIFO)</b>. Build the list here, or tick decks in the Database tab and press “Add to journey”. Play them from the Play tab — each finished deck records its actual result automatically and the next one is queued. The journey survives reloads (saved in this browser).</p>
+    <div class="exportrow" style="margin-top:8px;align-items:flex-end">
+      <span class="genstat" style="align-self:center">BULK ADD</span>
+      <label class="jreq"># decks<input type="number" id="jBulkN" value="5" min="1"></label>
+      <label class="jreq">P BJ ≥<input type="number" data-jmin="player_bj"></label>
+      <label class="jreq">Splits ≥<input type="number" data-jmin="splits"></label>
+      <label class="jreq">Doubles ≥<input type="number" data-jmin="doubles"></label>
+      <label class="jreq">P21+ ≥<input type="number" data-jmin="player_21_3plus"></label>
+      <label class="jreq">Pushes ≥<input type="number" data-jmin="pushes"></label>
+      <label class="jreq">sWin% ≥<input type="number" data-jmin="sim_win_pct"></label>
+      <label class="jreq">D BJ ≤<input type="number" data-jmax="dealer_bj"></label>
+      <label class="jreq">Bust% ≤<input type="number" data-jmax="sim_500_bust"></label>
+      <button class="act primary" id="jBulkAdd"
+        title="Append N random decks meeting every requirement (from the current Database filter, skipping decks already in the journey)">Add matching</button>
+      <span class="genstat" id="jBulkInfo" style="align-self:center"></span>
+    </div>
     <div class="exportrow" style="margin-top:4px">
       <span class="genstat">PACING</span>
       <button class="act" data-jorder="easy" title="Highest weighted win % first — friendly opening, tough finish">Ease-in (kind → tough)</button>
@@ -560,6 +581,10 @@
   <h2 class="sec">Cumulative net</h2>
   <p class="secnote" id="jNetNote"></p>
   <div class="chart" id="jChartNet"></div>
+
+  <h2 class="sec">Missions per stage <span class="matchcount" id="jMissCount"></span></h2>
+  <p class="secnote">How many times each mission (from Blackjack_Missions_One_Deck.xlsx) happens at every stage of the journey, counted on the deterministic active-sheet line. 20 of the 30 missions are rank-based and countable — suit missions (Same Suit/Color, Suited BJ, Mixed/Colored/Perfect Pair, Flushes, Straight Flushes) need suits the decks don't carry.</p>
+  <div class="tablewrap" id="jMissions"></div>
 
   <h2 class="sec">Deck list <span class="matchcount" id="jCount"></span></h2>
   <div class="tablewrap">
@@ -1434,6 +1459,7 @@ function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log){
     const last=(seq.length-pos)<=LAST_AT;
     s.rounds++;
     const p=[seq[pos++],seq[pos++]];const d=[seq[pos++],seq[pos++]];
+    const deal=log?[p[0],p[1],d[0],d[1]]:null;   // original deal (split mutates p)
     const up=RANKVAL[d[0]];
     const pbj=total(p)[0]===21,dbj=total(d)[0]===21;
     if(pbj||dbj){
@@ -1443,7 +1469,7 @@ function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log){
       if(pbj&&dbj){s.pushes++;res='push — both blackjack';}
       else if(pbj){s.player_wins++;bankroll+=BJ_BONUS;res=`WIN — blackjack +$${BJ_BONUS}`;}
       else{s.dealer_wins++;bankroll=Math.max(0,bankroll-BJ_PENALTY);res=`lose — dealer blackjack −$${BJ_PENALTY}`;}
-      if(log)log.push({hands:[{cards:p.slice(),bet:0,acts:[],res}],dealer:d.slice(),bk:bankroll,last});
+      if(log)log.push({deal,hands:[{cards:p.slice(),bet:0,acts:[],res}],dealer:d.slice(),bk:bankroll,last});
       if(last)break;
       continue;
     }
@@ -1504,7 +1530,7 @@ function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log){
       else if(t<dt){s.dealer_wins++;h.res='lose';}
       else{s.pushes++;bankroll+=h.bet;h.res='push';}
     }
-    if(log)log.push({hands:hands.map(h=>({cards:h.cards.slice(),bet:h.bet,acts:h.acts,res:h.res})),
+    if(log)log.push({deal,hands:hands.map(h=>({cards:h.cards.slice(),bet:h.bet,acts:h.acts,res:h.res})),
       dealer:d.slice(),bk:bankroll,last});
     if(last)break;
   }
@@ -2191,6 +2217,53 @@ function jAdd(ids){
   return added;
 }
 
+// ── missions (Blackjack_Missions_One_Deck.xlsx — rank-evaluable subset) ──
+const RANK_ORDER={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14};
+const TENVAL=c=>'TJQK'.includes(c);
+function straightN(cards){                    // distinct consecutive ranks, ace high or low
+  const vs=[...new Set(cards.map(c=>RANK_ORDER[c]))];
+  if(vs.length!==cards.length)return false;
+  const run=a=>{a.sort((x,y)=>x-y);return a[a.length-1]-a[0]===a.length-1;};
+  if(run([...vs]))return true;
+  if(vs.includes(14))return run(vs.map(v=>v===14?1:v));
+  return false;
+}
+const rankCounts=cs=>{const c={};cs.forEach(x=>c[x]=(c[x]||0)+1);return Object.values(c);};
+const MISSIONS=[
+  {cat:'Opening',name:'Any Pair',f:r=>r.deal[0]===r.deal[1]},
+  {cat:'Opening',name:'Blackjack',f:r=>{const[a,b]=r.deal;
+    return (a==='A'&&TENVAL(b))||(b==='A'&&TENVAL(a));}},
+  {cat:'Opening',name:'Pocket Aces',f:r=>r.deal[0]==='A'&&r.deal[1]==='A'},
+  {cat:'Opening',name:'Hard 20',f:r=>TENVAL(r.deal[0])&&TENVAL(r.deal[1])},
+  {cat:'Opening',name:'Starting 11',f:r=>r.deal[0]!=='A'&&r.deal[1]!=='A'&&
+    RANKVAL[r.deal[0]]+RANKVAL[r.deal[1]]===11},
+  {cat:'21+3',name:'Pair (21+3)',f:r=>new Set(r.deal.slice(0,3)).size===2},
+  {cat:'21+3',name:'Three of a Kind (21+3)',f:r=>new Set(r.deal.slice(0,3)).size===1},
+  {cat:'21+3',name:'Straight (21+3)',f:r=>straightN(r.deal.slice(0,3))},
+  {cat:'4 Cards',name:'Two Pair',f:r=>{const v=rankCounts(r.deal);
+    return v.length===2&&v[0]===2&&v[1]===2;}},
+  {cat:'4 Cards',name:'Three of a Kind (4c)',f:r=>Math.max(...rankCounts(r.deal))===3},
+  {cat:'4 Cards',name:'Four-card Straight',f:r=>straightN(r.deal)},
+  {cat:'4 Cards',name:'Four of a Kind',f:r=>new Set(r.deal).size===1},
+  {cat:'Gameplay',name:'Reach 21 (not BJ)',f:r=>r.hands.some(h=>
+    h.cards.length>=3&&total(h.cards)[0]===21)},
+  {cat:'Gameplay',name:'Win with 5+ cards',f:r=>r.hands.some(h=>
+    /WIN/.test(h.res)&&h.cards.length>=5)},
+  {cat:'Gameplay',name:'Win with 6+ cards',f:r=>r.hands.some(h=>
+    /WIN/.test(h.res)&&h.cards.length>=6)},
+  {cat:'Gameplay',name:'Win after Double',f:r=>r.hands.some(h=>
+    h.acts&&h.acts.some(a=>a.startsWith('double'))&&/WIN/.test(h.res))},
+  {cat:'Gameplay',name:'Win Split Hand',f:r=>r.hands.length===2&&r.hands.some(h=>/WIN/.test(h.res))},
+  {cat:'Dealer',name:'Dealer Bust',f:r=>total(r.dealer)[0]>21},
+  {cat:'Dealer',name:'Dealer Bust 5+ cards',f:r=>total(r.dealer)[0]>21&&r.dealer.length>=5},
+  {cat:'Dealer',name:'Dealer Bust 6+ cards',f:r=>total(r.dealer)[0]>21&&r.dealer.length>=6},
+];
+function missionCounts(cardsStr){
+  const log=[];
+  gameRoundsFrom(cardsStr.split(''),0,START_BANKROLL,fresh(),ACTIVE.decide,ACTIVE.h17,log);
+  return MISSIONS.map(m=>log.reduce((a,r)=>a+(m.f(r)?1:0),0));
+}
+
 // minimal SVG line chart: expected line + ±σ band + actual dots/line
 function jChart(o){
   const w=640,h=210,pl=48,pr=12,pt=12,pb=24;
@@ -2248,6 +2321,10 @@ function journeyRender(){
   for(const e of L){const d=dOf(e);if(!d)continue;
     if(d.sim_win_pct!=null&&(!toughest||d.sim_win_pct<toughest.w))toughest={id:e.id,w:d.sim_win_pct};
     if(d.sim_500_bust!=null&&(!riskiest||d.sim_500_bust>riskiest.b))riskiest={id:e.id,b:d.sim_500_bust};}
+  // missions per stage (deterministic active-sheet line)
+  const missPerDeck=L.map(e=>{const d=dOf(e);return d?missionCounts(d.cards):null;});
+  const missTotals=MISSIONS.map((_,mi)=>missPerDeck.reduce((a,pc)=>a+(pc?pc[mi]:0),0));
+  const covered=missTotals.filter(t=>t>0).length;
   document.getElementById('jTiles').innerHTML=L.length?[
     ['Journey decks',fmt(L.length),`${played.length} played · ${L.length-played.length} to go`,'gold'],
     ['Expected total net',(expTotal>=0?'+$':'−$')+fmt(Math.abs(Math.round(expTotal))),
@@ -2259,6 +2336,7 @@ function journeyRender(){
     ['Actual win %',actWin==null?'—':f1(actWin)+'%','decided hands so far',''],
     ['Toughest deck',toughest?f1(toughest.w)+'%':'—',toughest?'deck '+toughest.id:'','lose'],
     ['Riskiest @ $500',riskiest&&riskiest.b?riskiest.b+'% bust':'—',riskiest&&riskiest.b?'deck '+riskiest.id:'','lose'],
+    ['Missions covered',`${covered} / ${MISSIONS.length}`,'rank-based missions hit somewhere in the journey','gold'],
   ].map(([k,v,s,c])=>`<div class="stat ${c}"><div class="k">${k}</div><div class="v">${v}</div>
      ${s?`<div class="s">${s}</div>`:''}</div>`).join('')
   :'<div class="stat"><div class="k">Journey</div><div class="v">empty</div><div class="s">add decks to begin</div></div>';
@@ -2289,6 +2367,24 @@ function journeyRender(){
     act:actCum,yMin,yMax,refY:0,
     yFmt:v=>(v<0?'−$':'$')+Math.abs(Math.round(v)).toLocaleString('en-US'),
   }):'';
+
+  // missions matrix
+  document.getElementById('jMissCount').textContent=L.length?`${covered} of ${MISSIONS.length} covered`:'';
+  document.getElementById('jMissions').innerHTML=!L.length?'':
+    `<table><thead><tr><th style="text-align:left">Category</th><th style="text-align:left">Mission</th>`+
+    L.map((_,i)=>`<th title="stage ${i+1}">${i+1}</th>`).join('')+
+    `<th>Total</th></tr></thead><tbody>`+
+    MISSIONS.map((m,mi)=>{
+      const cells=missPerDeck.map(pc=>pc==null?'—':pc[mi]);
+      return `<tr><td class="dim" style="text-align:left">${m.cat}</td>`+
+        `<td style="text-align:left">${m.name}</td>`+
+        cells.map(v=>`<td>${v==='—'?'—':v?`<span class="mhit">${v}</span>`:'<span class="dim">·</span>'}</td>`).join('')+
+        `<td><b class="${missTotals[mi]?'delta-up':'dim'}">${missTotals[mi]||'·'}</b></td></tr>`;
+    }).join('')+
+    `<tr><td></td><td style="text-align:left" class="dim">missions at this stage</td>`+
+    L.map((_,i)=>{const t=missPerDeck[i]?missPerDeck[i].reduce((a,b)=>a+(b?1:0),0):null;
+      return `<td><b>${t==null?'—':t}</b></td>`;}).join('')+
+    `<td></td></tr></tbody></table>`;
 
   // deck list
   document.querySelector('#jTable tbody').innerHTML=L.map((e,i)=>{
@@ -2361,6 +2457,26 @@ document.getElementById('jAddRandom').onclick=()=>{
   const picks=[];
   for(let i=0;i<5&&pool.length;i++)picks.push(pool[Math.floor(Math.random()*pool.length)].deck_id);
   jAdd(picks);
+};
+document.getElementById('jBulkAdd').onclick=()=>{
+  const n=Math.max(1,+document.getElementById('jBulkN').value||5);
+  const mins=[...document.querySelectorAll('input[data-jmin]')]
+    .filter(i=>i.value!=='').map(i=>[i.dataset.jmin,+i.value]);
+  const maxs=[...document.querySelectorAll('input[data-jmax]')]
+    .filter(i=>i.value!=='').map(i=>[i.dataset.jmax,+i.value]);
+  const inJ=new Set(JOURNEY.list.map(e=>e.id));
+  const pool=(FILTERED.length?FILTERED:DECKS).filter(d=>!inJ.has(String(d.deck_id))
+    &&mins.every(([k,v])=>d[k]!=null&&d[k]>=v)
+    &&maxs.every(([k,v])=>d[k]!=null&&d[k]<=v));
+  const info=document.getElementById('jBulkInfo');
+  if(!pool.length){info.textContent='no decks match the requirements';return;}
+  const idx=[...pool.keys()],picks=[];
+  for(let i=0;i<n&&idx.length;i++){
+    const j=Math.floor(Math.random()*idx.length);
+    picks.push(pool[idx[j]].deck_id);idx.splice(j,1);
+  }
+  jAdd(picks);
+  info.textContent=`added ${picks.length} of ${fmt(pool.length)} matching decks`;
 };
 document.getElementById('jStart').onclick=()=>{
   const err=document.getElementById('jErr');err.textContent='';
