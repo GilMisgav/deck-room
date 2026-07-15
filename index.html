@@ -553,6 +553,8 @@
       <label class="jreq">P21+ ≥<input type="number" data-jmin="player_21_3plus"></label>
       <label class="jreq">Pushes ≥<input type="number" data-jmin="pushes"></label>
       <label class="jreq">sWin% ≥<input type="number" data-jmin="sim_win_pct"></label>
+      <label class="jreq" title="cap the weighted win % — e.g. 40 fills the journey with losing decks so the cumulative net falls">sWin% ≤<input type="number" data-jmax="sim_win_pct"></label>
+      <label class="jreq" title="cap the expected final bankroll under flat $100 — e.g. 2800 forces money-losing decks">Book$ ≤<input type="number" data-jmax="sim_book"></label>
       <label class="jreq">D BJ ≤<input type="number" data-jmax="dealer_bj"></label>
       <label class="jreq">Bust% ≤<input type="number" data-jmax="sim_500_bust"></label>
       <button class="act primary" id="jBulkAdd"
