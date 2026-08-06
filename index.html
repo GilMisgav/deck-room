@@ -539,16 +539,40 @@
       <h3>Mission inventory</h3>
       <div class="exportrow">
         <label class="jreq"># decks<input type="number" id="mK" value="5" min="1" max="30"></label>
-        <button class="act" id="mSuggest" title="Fill every selected target with an achievable value: ~75% of the expected events across the chosen number of decks">Suggest targets</button>
+        <button class="act" id="mSuggest" title="Fill every selected target with an achievable value scaled by the Effort control">Suggest targets</button>
         <button class="act primary" id="mBuild" title="Pick the decks (from the current Database filter) that best deliver the selected missions, and load them as the Journey">Build journey for missions</button>
-        <button class="act" id="mExport" title="Download a scripted daily-missions config (spec format) with the selected missions and targets">Export missions config</button>
+        <button class="act" id="mExport" title="Download a scripted daily-missions config (daily_missions_economy_spec_v2 format)">Export daily config</button>
+        <button class="act" id="mExportM3" title="Download a Mission 3.0 cycle config (PRD format: mission pool + token rewards + Bonus-Cash chest milestones)">Export Mission 3.0 cycle</button>
       </div>
     </div>
     <div class="err" id="mErr"></div>
+    <div class="exportrow" style="margin:6px 0 4px;align-items:flex-end">
+      <span class="genstat" style="align-self:center">COMPOSE EXPERIENCE</span>
+      <label class="jreq">missions<input type="number" id="mCount" value="3" min="1" max="5"></label>
+      <label class="jreq" title="How hard completion should feel — scales every target against the simulated expected events across the journey">effort
+        <select id="mEffort" style="padding:6px 8px">
+          <option value="0.5">Easy — cruise (50% of expected)</option>
+          <option value="0.75" selected>Medium (75%)</option>
+          <option value="1.0">Hard (100%)</option>
+          <option value="1.3">Grind — stretch (130%)</option>
+        </select></label>
+      <label class="jreq" title="PRD §6.1 comfort-zone ratio: share of missions from the player's easy tier vs stretch tiers">comfort %
+        <input type="number" id="mComfort" value="70" min="0" max="100" style="width:64px"></label>
+      <label class="jreq" title="Order missions across the journey">experience arc
+        <select id="mArc" style="padding:6px 8px">
+          <option value="quick" selected>Quick wins first</option>
+          <option value="hardopen">Hard opener</option>
+          <option value="mixed">Mixed</option>
+        </select></label>
+      <button class="act primary" id="mCompose"
+        title="Auto-pick mission types by tier and comfort ratio, set targets by effort, then build the delivering journey">Compose</button>
+    </div>
     <p class="secnote">Mission rates are measured per deck by the weighted simulation — 200 seeded “reasonable player” runs under the active strategy sheet, including the human deviations (standing on 16 vs 10, skipped doubles/splits, soft-18 stands). Tick missions, set targets (or let it suggest them), then build: the machine assembles the deck journey whose expected events cover every target. Rates refresh from the pool selected in the Database filter (currently <b id="mPool"></b> decks). Config export follows <code>daily_missions_economy_spec_v2.md</code>; rewards are placeholders per its §6.</p>
     <div class="tablewrap">
     <table id="mTable"><thead><tr>
       <th></th><th style="text-align:left">Mission type</th>
+      <th title="M3 = Mission 3.0 PRD bank · D = daily-missions spec">Src</th>
+      <th title="Difficulty tier assigned from the pool's simulated rate (PRD §6.1): ≥0.45/deck easy · ≥0.12 medium · below hard">Tier</th>
       <th title="mean events per deck across the pool (weighted sim)">Avg / deck</th>
       <th title="share of pool decks where the expected count is ≥ 1">≥1 in deck</th>
       <th title="best single deck in the pool">Best deck</th>
@@ -1497,7 +1521,7 @@ function draw(){return G.seq[G.pos++];}
 // simulate.js gameRoundsFrom (keep in sync). Deal order P1,P2,D-up,hole; naturals
 // flat pre-bet; flat $100 book bets; split max 2 hands by value; S17; dealer skips
 // drawing when all hands bust; the round that starts at ≤12 cards is the last.
-function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log){
+function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log,betFn){
   decide=decide||ACTIVE.decide;
   h17=h17===undefined?ACTIVE.h17:h17;
   let pos=startPos,bankroll=startBankroll;
@@ -1522,7 +1546,7 @@ function gameRoundsFrom(seq,startPos,startBankroll,s,decide,h17,log){
       continue;
     }
     if(RANKVAL[p[0]]===RANKVAL[p[1]])s.pairs_dealt++;
-    const bet=Math.min(BET_BOOK,bankroll);
+    const bet=betFn?betFn(bankroll):Math.min(BET_BOOK,bankroll);
     bankroll-=bet;
     const hands=[{cards:p,bet,doubled:false,splitAce:false,acts:[]}];
     for(let i=0;i<hands.length;i++){
@@ -2827,30 +2851,87 @@ document.getElementById('applyStrat').onclick=applyStrategy;
 // mission types from daily_missions_economy_spec_v2.md, measured per deck by the
 // weighted 200-run reasonable-player sim (16v10 stands, skipped doubles/splits…)
 const MBANK=[
-  {type:'blackjacks',label:'Blackjacks',col:'sim_pbj',
-    def:'Player natural blackjack (two-card 21) — counted even when it pushes'},
-  {type:'doubleDowns',label:'Double Downs',col:'m_dd',
-    def:'Hands where the player doubled down'},
-  {type:'splits',label:'Splits',col:'m_split',
-    def:'Rounds where the player split a pair'},
-  {type:'splitThenDouble',label:'Split then Double',col:'m_splitdbl',
-    def:'Rounds with a split followed by a double on a split hand (DAS)'},
-  {type:'winWith3PlusCards',label:'Win with 3+ Cards',col:'m_win3c',
-    def:'Winning hands made of three or more cards'},
-  {type:'winSoftHand',label:'Win Soft Hand',col:'m_winsoft',
-    def:'Winning hands whose final total is soft (an ace counting as 11)'},
-  {type:'winUnderdogStart',label:'Win Underdog Start',col:'m_winudog',
-    def:'Start hard 12–16 against dealer 9/10/A and win the hand'},
-  {type:'winDealerBustLowHand',label:'Win Dealer-Bust Low Hand',col:'m_windbust',
-    def:'Dealer busts while you win standing on 16 or less'},
-  {type:'winBothSplitHands',label:'Win Both Split Hands',col:'m_winboth',
-    def:'Both hands of a split win in the same round'},
-  {type:'winPVP',label:'Win PVP (match)',col:'m_matchwin',pct:true,
-    def:'Win the match — finish the deck above $3,000 (probability per deck)'},
-  {type:'winPvpStreak',label:'Win PVP Streak',col:'m_matchwin',pct:true,streak:true,
-    def:'Consecutive match wins across the journey — evaluated from per-deck match-win odds in play order'},
+  {type:'blackjacks',label:'Make Blackjacks',col:'sim_pbj',src:'M3+D',
+    def:'Be dealt a natural 21 (Ace + 10-value) — counted even when it pushes',
+    desc:x=>`Make ${x} Blackjacks`},
+  {type:'doubleDowns',label:'Make Double Downs',col:'m_dd',src:'M3+D',
+    def:'Double down on a hand',desc:x=>`Make ${x} double downs`},
+  {type:'splits',label:'Make Splits',col:'m_split',src:'M3+D',
+    def:'Split a pair',desc:x=>`Make ${x} splits`},
+  {type:'winBothSplitHands',label:'Win Both Split Hands',col:'m_winboth',src:'M3+D',
+    def:'Both hands of a split win in the same round',desc:x=>`Win both split hands ${x} times`},
+  {type:'make21sNonBJ',label:'Make 21s (non-BJ)',col:'sim_p21',src:'M3',
+    def:'Reach a hand total of exactly 21 that is not a natural Blackjack',
+    desc:x=>`Make ${x} non-BJ 21s`},
+  {type:'winWith3PlusCards',label:'Win with 3+ Cards',col:'m_win3c',src:'M3+D',
+    def:'Win a hand whose final hand contains 3 or more cards',desc:x=>`Win ${x} multi-card hands`},
+  {type:'fastScorer',label:'Fast Scorer (5k in first X hands)',col:null,lazy:true,pct:true,src:'M3',
+    def:'Pass 5,000 score within your first X hands of a match — probability per deck, simulated under chip-mix betting (200/350/500); the target sets X',
+    desc:x=>`Reach 5,000 in first ${x} hands`},
+  {type:'splitThenDouble',label:'Split then Double',col:'m_splitdbl',src:'M3+D',
+    def:'A split followed by a double down on a split hand (DAS)',
+    desc:x=>`Win ${x} split-then-double hands`},
+  {type:'winSoftHand',label:'Win Soft Hand',col:'m_winsoft',src:'D',
+    def:'Winning hands whose final total is soft (an ace counting as 11)',
+    desc:x=>`Win ${x} soft hands`},
+  {type:'winUnderdogStart',label:'Win Underdog Start',col:'m_winudog',src:'D',
+    def:'Start hard 12–16 against dealer 9/10/A and win the hand',
+    desc:x=>`Win ${x} underdog starts`},
+  {type:'winDealerBustLowHand',label:'Win Dealer-Bust Low Hand',col:'m_windbust',src:'D',
+    def:'Dealer busts while you win standing on 16 or less',
+    desc:x=>`Win ${x} dealer-bust low hands`},
+  {type:'winPVP',label:'Win PVP (match)',col:'m_matchwin',pct:true,src:'D',
+    def:'Win the match — finish the deck above $3,000 (probability per deck)',
+    desc:x=>`Win ${x} PVP matches`},
+  {type:'winPvpStreak',label:'Win PVP Streak',col:'m_matchwin',pct:true,streak:true,src:'D',
+    def:'Consecutive match wins across the journey — evaluated from per-deck match-win odds in play order',
+    desc:x=>`Win ${x} PVP matches in a row`},
 ];
-const mVal=(d,m)=>{const v=d[m.col];return v==null?0:(m.pct?v/100:v);};
+// Fast Scorer: P(bankroll ≥ $5,000 within the first X rounds), chip-mix bets
+const FS_CACHE=new Map();
+function makeBetMixB(rng){
+  const CH=[200,350,500];
+  return bk=>{const aff=CH.filter(c=>c<=bk);
+    if(!aff.length)return Math.min(bk,CH[0]);
+    return aff[Math.floor(rng()*aff.length)];};
+}
+function fsDeckProb(d,X,runs){
+  runs=runs||40;
+  const key=d.deck_id+'|'+X+'|'+runs+'|'+STRATREV;
+  if(FS_CACHE.has(key))return FS_CACHE.get(key);
+  const bid=BigInt(d.deck_id);
+  const seedBase=hashSeed(Number(bid&0xffffffffn),Number(bid>>32n));
+  let hit=0;
+  for(let k=0;k<runs;k++){
+    const log=[];
+    gameRoundsFrom(d.cards.split(''),0,START_BANKROLL,fresh(),
+      makeReasonableDecide(mulberry32(hashSeed(0x5EED,seedBase,k))),ACTIVE.h17,log,
+      makeBetMixB(mulberry32(hashSeed(0xBE7,seedBase,k))));
+    if(log.slice(0,X).some(r=>r.bk>=5000))hit++;
+  }
+  const p=hit/runs;
+  FS_CACHE.set(key,p);
+  if(FS_CACHE.size>4000)FS_CACHE.clear();
+  return p;
+}
+function fsPoolAvg(pool,X){
+  const key='pool|'+pool.length+'|'+X+'|'+STRATREV;
+  if(FS_CACHE.has(key))return FS_CACHE.get(key);
+  const n=Math.min(120,pool.length);
+  let s=0;
+  for(let i=0;i<n;i++)s+=fsDeckProb(pool[Math.floor(i*pool.length/n)],X,30);
+  const v=n?s/n:0;
+  FS_CACHE.set(key,v);
+  return v;
+}
+let MORDER=[];   // mission order chosen by the composer (chain index order)
+const fsWindow=()=>Math.max(1,+document.querySelector('input[data-mtarget="fastScorer"]')?.value||8);
+const mVal=(d,m)=>{
+  if(m.lazy)return 0;   // fastScorer valued separately where supported
+  const v=d[m.col];return v==null?0:(m.pct?v/100:v);
+};
+const tierOf=avg=>avg>=0.45?'easy':avg>=0.12?'medium':'hard';
+const TIER_CLR={easy:'var(--win)',medium:'var(--gold)',hard:'var(--lose)'};
 // exact P(a run of ≥T consecutive wins) for independent per-deck win odds ps
 function streakProb(ps,T){
   if(T<=0)return 1;
@@ -2876,44 +2957,65 @@ function missionsRender(){
     return cb?[cb.dataset.mt,{on:cb.checked,target:tg.value}]:[null,null];
   }));
   tb.innerHTML=MBANK.map(m=>{
-    const vals=pool.map(d=>mVal(d,m)).filter(v=>v>0||true);
-    const avg=vals.reduce((a,b)=>a+b,0)/(vals.length||1);
-    const ge1=100*pool.filter(d=>mVal(d,m)>=(m.pct?0.5:1)).length/(pool.length||1);
-    const best=Math.max(0,...pool.map(d=>mVal(d,m)));
     const prev=keep.get(m.type)||{on:false,target:''};
+    let avg,ge1,best;
+    if(m.lazy){
+      avg=fsPoolAvg(pool,+(prev.target||8));ge1=null;best=null;
+    }else{
+      avg=pool.reduce((a,d)=>a+mVal(d,m),0)/(pool.length||1);
+      ge1=100*pool.filter(d=>mVal(d,m)>=(m.pct?0.5:1)).length/(pool.length||1);
+      best=Math.max(0,...pool.map(d=>mVal(d,m)));
+    }
+    const tier=tierOf(avg);
     return `<tr title="${m.def}">
       <td><input type="checkbox" data-mt="${m.type}" ${prev.on?'checked':''}></td>
       <td style="text-align:left">${m.label}${m.streak?' <span class="dim">(journey-level)</span>':''}</td>
+      <td class="dim">${m.src}</td>
+      <td><span style="color:${TIER_CLR[tier]};font-weight:600">${tier}</span></td>
       <td>${m.pct?(100*avg).toFixed(1)+'%':avg.toFixed(2)}</td>
-      <td class="dim">${m.streak?'—':ge1.toFixed(0)+'%'}</td>
-      <td class="dim">${m.streak?'—':(m.pct?(100*best).toFixed(0)+'%':best.toFixed(2))}</td>
-      <td><input type="number" min="1" style="width:70px" data-mtarget="${m.type}" value="${prev.target||''}" placeholder="—"></td>
+      <td class="dim">${m.streak||m.lazy?'—':ge1.toFixed(0)+'%'}</td>
+      <td class="dim">${m.streak||m.lazy?'—':(m.pct?(100*best).toFixed(0)+'%':best.toFixed(2))}</td>
+      <td><input type="number" min="1" style="width:70px" data-mtarget="${m.type}" value="${prev.target||(m.lazy?8:'')}" placeholder="—"></td>
     </tr>`;
   }).join('');
 }
 function mSelected(){
-  return MBANK.filter(m=>document.querySelector(`input[data-mt="${m.type}"]`)?.checked)
+  const sel=MBANK.filter(m=>document.querySelector(`input[data-mt="${m.type}"]`)?.checked)
     .map(m=>({m,target:Math.max(1,+document.querySelector(`input[data-mtarget="${m.type}"]`).value||1)}));
+  if(MORDER.length)sel.sort((a,b)=>{
+    const ia=MORDER.indexOf(a.m.type),ib=MORDER.indexOf(b.m.type);
+    return (ia<0?99:ia)-(ib<0?99:ib);});
+  return sel;
 }
-document.getElementById('mSuggest').onclick=()=>{
+function effortMult(){return +document.getElementById('mEffort').value||0.75;}
+function suggestTargets(){
   const pool=FILTERED.length?FILTERED:DECKS;
   const K=Math.max(1,+document.getElementById('mK').value||5);
+  const eff=effortMult();
   for(const m of MBANK){
     const cb=document.querySelector(`input[data-mt="${m.type}"]`);
     if(!cb||!cb.checked)continue;
+    if(m.lazy)continue;                       // fastScorer target = hands window, user-set
     const avg=pool.reduce((a,d)=>a+mVal(d,m),0)/(pool.length||1);
-    const t=m.streak?2:Math.max(1,Math.round(0.75*K*avg));
+    const t=m.streak?Math.max(2,Math.round(eff*2.5)):Math.max(1,Math.round(eff*K*avg));
     document.querySelector(`input[data-mtarget="${m.type}"]`).value=t;
   }
-};
-document.getElementById('mBuild').onclick=()=>{
+}
+document.getElementById('mSuggest').onclick=suggestTargets;
+function buildFromSelection(sel,K){
   const err=document.getElementById('mErr');err.textContent='';
-  const sel=mSelected();
   if(!sel.length){err.textContent='Tick at least one mission first.';return;}
-  const K=Math.max(1,Math.min(30,+document.getElementById('mK').value||5));
   const pool=FILTERED.length?FILTERED:DECKS;
-  // greedy: each pick maximises progress toward the still-open targets
-  const counting=sel.filter(s=>!s.m.streak);
+  // greedy: each pick maximises progress toward the still-open targets.
+  // fastScorer is valued via mix-bet simulation on a 300-deck shortlist (by s500 $).
+  const fsSel=sel.find(s=>s.m.lazy);
+  const fsX=fsSel?fsSel.target:8;
+  const fsShort=fsSel?new Set([...pool].sort((a,b)=>(b.sim_500_book||0)-(a.sim_500_book||0))
+    .slice(0,300).map(d=>String(d.deck_id))):null;
+  const dVal=(d,s)=>s.m.lazy
+    ?(fsShort.has(String(d.deck_id))?fsDeckProb(d,fsX,30):0)
+    :mVal(d,s.m);
+  const counting=sel.filter(s=>!s.m.streak&&!s.m.lazy);
   const remaining=counting.map(s=>s.target);
   const streakSel=sel.find(s=>s.m.streak);
   const used=new Set(),chosen=[];
@@ -2924,6 +3026,7 @@ document.getElementById('mBuild').onclick=()=>{
       let score=0;
       counting.forEach((s,i)=>{score+=Math.min(mVal(d,s.m),remaining[i])/s.target;});
       if(streakSel)score+=0.35*mVal(d,streakSel.m);   // streaks want high match-win odds
+      if(fsSel)score+=0.5*dVal(d,fsSel);
       if(score>bestScore){bestScore=score;best=d;}
     }
     if(!best)break;
@@ -2941,6 +3044,11 @@ document.getElementById('mBuild').onclick=()=>{
       return {label:`${s.m.label} ≥${s.target}`,target:s.target,
         exp:(100*p).toFixed(0)+'% chance',ok:p>=0.5,stage:'—'};
     }
+    if(s.m.lazy){
+      const pNone=chosen.reduce((a,d)=>a*(1-dVal(d,s)),1);
+      return {label:`${s.m.label.replace('X',s.target)} (X=${s.target})`,target:1,
+        exp:(100*(1-pNone)).toFixed(0)+'% chance ≥1 match',ok:(1-pNone)>=0.5,stage:'—'};
+    }
     let cum=0,stage='not reached';
     for(let i=0;i<chosen.length;i++){cum+=mVal(chosen[i],s.m);
       if(cum>=s.target&&stage==='not reached')stage='stage '+(i+1);}
@@ -2956,6 +3064,73 @@ document.getElementById('mBuild').onclick=()=>{
         <td>${r.stage}</td><td class="${r.ok?'delta-up':'delta-down'}">${r.ok?'✓':'✗ raise decks or lower target'}</td></tr>`).join('')}</tbody></table>
       <p class="secnote" style="margin-top:8px">Decks: ${chosen.map(d=>d.deck_id).join(' · ')}</p>
     </div>`;
+}
+document.getElementById('mBuild').onclick=()=>
+  buildFromSelection(mSelected(),Math.max(1,Math.min(30,+document.getElementById('mK').value||5)));
+
+// ── experience composer: tiers × comfort ratio (PRD §6.1) × effort × arc ──
+document.getElementById('mCompose').onclick=()=>{
+  const err=document.getElementById('mErr');err.textContent='';
+  const pool=FILTERED.length?FILTERED:DECKS;
+  const M=Math.max(1,Math.min(5,+document.getElementById('mCount').value||3));
+  const comfort=Math.max(0,Math.min(100,+document.getElementById('mComfort').value||70))/100;
+  const arc=document.getElementById('mArc').value;
+  // rate + tier per composable type (streak & fastScorer stay manual-only)
+  const cands=MBANK.filter(m=>!m.streak&&!m.lazy).map(m=>{
+    const avg=pool.reduce((a,d)=>a+mVal(d,m),0)/(pool.length||1);
+    return {m,avg,tier:tierOf(avg)};
+  });
+  const easy=cands.filter(c=>c.tier==='easy').sort((a,b)=>b.avg-a.avg);
+  const med=cands.filter(c=>c.tier==='medium').sort((a,b)=>b.avg-a.avg);
+  const hard=cands.filter(c=>c.tier==='hard').sort((a,b)=>b.avg-a.avg);
+  const nComf=Math.round(M*comfort);
+  const picks=[];
+  const take=(arr,n)=>{for(const c of arr){if(picks.length>=M||n<=0)break;
+    if(!picks.includes(c)){picks.push(c);n--;}}};
+  take(easy,nComf);take(med,Math.ceil((M-picks.length)/2));take(hard,M-picks.length);
+  take(med,M-picks.length);take(easy,M-picks.length);   // backfill if tiers ran dry
+  if(!picks.length){err.textContent='No composable missions in this pool.';return;}
+  // arc = order of the chain
+  if(arc==='quick')picks.sort((a,b)=>b.avg-a.avg);
+  else if(arc==='hardopen')picks.sort((a,b)=>a.avg-b.avg);
+  else if(arc==='mixed'){picks.sort((a,b)=>b.avg-a.avg);
+    const out=[];let i=0,j=picks.length-1;
+    while(i<=j){out.push(picks[i++]);if(i<=j)out.push(picks[j--]);}
+    picks.length=0;picks.push(...out);}
+  MORDER=picks.map(c=>c.m.type);
+  MBANK.forEach(m=>{const cb=document.querySelector(`input[data-mt="${m.type}"]`);
+    if(cb)cb.checked=MORDER.includes(m.type);});
+  suggestTargets();
+  buildFromSelection(mSelected(),Math.max(1,Math.min(30,+document.getElementById('mK').value||5)));
+};
+
+// Mission 3.0 cycle config export (PRD §3.2 / §9.2 data objects)
+document.getElementById('mExportM3').onclick=()=>{
+  const err=document.getElementById('mErr');err.textContent='';
+  const sel=mSelected();
+  if(!sel.length){err.textContent='Tick at least one mission first.';return;}
+  const pool=FILTERED.length?FILTERED:DECKS;
+  const TOK={easy:20,medium:30,hard:50};
+  const missionPool=sel.map(s=>{
+    const avg=s.m.lazy?fsPoolAvg(pool,s.target)
+      :pool.reduce((a,d)=>a+mVal(d,s.m),0)/(pool.length||1);
+    return {type:s.m.type,description:s.m.desc?s.m.desc(s.target):`${s.m.label} × ${s.target}`,
+      target:s.target,tier:tierOf(avg),tokens:TOK[tierOf(avg)],bonusCash:0};
+  });
+  const totalTokens=missionPool.reduce((a,m)=>a+m.tokens,0);
+  const cfg={
+    cycle:{startDate:null,endDate:null,recurrence:null,durationDays:6,missionRefreshHours:24},
+    missionCount:missionPool.length,
+    missionPool,
+    chestMilestones:[
+      {position:Math.ceil(totalTokens*0.33),bonusCash:0.50},
+      {position:Math.ceil(totalTokens*0.66),bonusCash:1.50},
+      {position:totalTokens,bonusCash:3.00},
+    ],
+    _generator:'Deck Room missions machine',
+    _basis:'targets sized by 200-run reasonable-player simulation (active sheet + human deviations); rewards are placeholders',
+  };
+  downloadJSON(cfg,'mission3_cycle_config.json');
 };
 document.getElementById('mExport').onclick=()=>{
   const err=document.getElementById('mErr');err.textContent='';
