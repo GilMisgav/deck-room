@@ -344,6 +344,7 @@
   <button data-v="db">Database</button>
   <button data-v="strat">Strategy</button>
   <button data-v="gen">Generate</button>
+  <button data-v="missions">Missions</button>
   <button data-v="journey">Journey</button>
   <button data-v="play">Play a Deck</button>
   <div class="spacer"></div>
@@ -529,6 +530,33 @@
     <th title="Final bankroll — flat $100 sheet bets from $3,000">Book $</th><th></th>
   </tr></thead><tbody></tbody></table>
   </div>
+</section>
+
+<!-- ═══════════ MISSIONS MACHINE ═══════════ -->
+<section class="view" id="v-missions">
+  <div class="filterbox">
+    <div class="filterhead">
+      <h3>Mission inventory</h3>
+      <div class="exportrow">
+        <label class="jreq"># decks<input type="number" id="mK" value="5" min="1" max="30"></label>
+        <button class="act" id="mSuggest" title="Fill every selected target with an achievable value: ~75% of the expected events across the chosen number of decks">Suggest targets</button>
+        <button class="act primary" id="mBuild" title="Pick the decks (from the current Database filter) that best deliver the selected missions, and load them as the Journey">Build journey for missions</button>
+        <button class="act" id="mExport" title="Download a scripted daily-missions config (spec format) with the selected missions and targets">Export missions config</button>
+      </div>
+    </div>
+    <div class="err" id="mErr"></div>
+    <p class="secnote">Mission rates are measured per deck by the weighted simulation — 200 seeded “reasonable player” runs under the active strategy sheet, including the human deviations (standing on 16 vs 10, skipped doubles/splits, soft-18 stands). Tick missions, set targets (or let it suggest them), then build: the machine assembles the deck journey whose expected events cover every target. Rates refresh from the pool selected in the Database filter (currently <b id="mPool"></b> decks). Config export follows <code>daily_missions_economy_spec_v2.md</code>; rewards are placeholders per its §6.</p>
+    <div class="tablewrap">
+    <table id="mTable"><thead><tr>
+      <th></th><th style="text-align:left">Mission type</th>
+      <th title="mean events per deck across the pool (weighted sim)">Avg / deck</th>
+      <th title="share of pool decks where the expected count is ≥ 1">≥1 in deck</th>
+      <th title="best single deck in the pool">Best deck</th>
+      <th>Target</th>
+    </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div id="mResult"></div>
 </section>
 
 <!-- ═══════════ JOURNEY ═══════════ -->
@@ -1346,6 +1374,7 @@ function switchView(v){
   document.querySelectorAll('nav button[data-v]').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id==='v-'+v));
   if (v==='journey' && typeof journeyRender==='function') journeyRender();
+  if (v==='missions' && typeof missionsRender==='function') missionsRender();
 }
 document.querySelectorAll('nav button[data-v]').forEach(b=> b.onclick = ()=>switchView(b.dataset.v));
 
@@ -2793,6 +2822,160 @@ function applyStrategy(){
   })();
 }
 document.getElementById('applyStrat').onclick=applyStrategy;
+
+// ═══════════════════════════════════════════════════════ MISSIONS MACHINE
+// mission types from daily_missions_economy_spec_v2.md, measured per deck by the
+// weighted 200-run reasonable-player sim (16v10 stands, skipped doubles/splits…)
+const MBANK=[
+  {type:'blackjacks',label:'Blackjacks',col:'sim_pbj',
+    def:'Player natural blackjack (two-card 21) — counted even when it pushes'},
+  {type:'doubleDowns',label:'Double Downs',col:'m_dd',
+    def:'Hands where the player doubled down'},
+  {type:'splits',label:'Splits',col:'m_split',
+    def:'Rounds where the player split a pair'},
+  {type:'splitThenDouble',label:'Split then Double',col:'m_splitdbl',
+    def:'Rounds with a split followed by a double on a split hand (DAS)'},
+  {type:'winWith3PlusCards',label:'Win with 3+ Cards',col:'m_win3c',
+    def:'Winning hands made of three or more cards'},
+  {type:'winSoftHand',label:'Win Soft Hand',col:'m_winsoft',
+    def:'Winning hands whose final total is soft (an ace counting as 11)'},
+  {type:'winUnderdogStart',label:'Win Underdog Start',col:'m_winudog',
+    def:'Start hard 12–16 against dealer 9/10/A and win the hand'},
+  {type:'winDealerBustLowHand',label:'Win Dealer-Bust Low Hand',col:'m_windbust',
+    def:'Dealer busts while you win standing on 16 or less'},
+  {type:'winBothSplitHands',label:'Win Both Split Hands',col:'m_winboth',
+    def:'Both hands of a split win in the same round'},
+  {type:'winPVP',label:'Win PVP (match)',col:'m_matchwin',pct:true,
+    def:'Win the match — finish the deck above $3,000 (probability per deck)'},
+  {type:'winPvpStreak',label:'Win PVP Streak',col:'m_matchwin',pct:true,streak:true,
+    def:'Consecutive match wins across the journey — evaluated from per-deck match-win odds in play order'},
+];
+const mVal=(d,m)=>{const v=d[m.col];return v==null?0:(m.pct?v/100:v);};
+// exact P(a run of ≥T consecutive wins) for independent per-deck win odds ps
+function streakProb(ps,T){
+  if(T<=0)return 1;
+  let states=new Array(T).fill(0);states[0]=1;let hit=0;
+  for(const p of ps){
+    const next=new Array(T).fill(0);
+    for(let r=0;r<T;r++){
+      const m=states[r];if(!m)continue;
+      if(r+1>=T)hit+=m*p;else next[r+1]+=m*p;
+      next[0]+=m*(1-p);
+    }
+    states=next;
+  }
+  return hit;
+}
+function missionsRender(){
+  const pool=FILTERED.length?FILTERED:DECKS;
+  document.getElementById('mPool').textContent=fmt(pool.length);
+  const tb=document.querySelector('#mTable tbody');
+  const keep=new Map([...tb.querySelectorAll('tr')].map(tr=>{
+    const cb=tr.querySelector('input[data-mt]');
+    const tg=tr.querySelector('input[data-mtarget]');
+    return cb?[cb.dataset.mt,{on:cb.checked,target:tg.value}]:[null,null];
+  }));
+  tb.innerHTML=MBANK.map(m=>{
+    const vals=pool.map(d=>mVal(d,m)).filter(v=>v>0||true);
+    const avg=vals.reduce((a,b)=>a+b,0)/(vals.length||1);
+    const ge1=100*pool.filter(d=>mVal(d,m)>=(m.pct?0.5:1)).length/(pool.length||1);
+    const best=Math.max(0,...pool.map(d=>mVal(d,m)));
+    const prev=keep.get(m.type)||{on:false,target:''};
+    return `<tr title="${m.def}">
+      <td><input type="checkbox" data-mt="${m.type}" ${prev.on?'checked':''}></td>
+      <td style="text-align:left">${m.label}${m.streak?' <span class="dim">(journey-level)</span>':''}</td>
+      <td>${m.pct?(100*avg).toFixed(1)+'%':avg.toFixed(2)}</td>
+      <td class="dim">${m.streak?'—':ge1.toFixed(0)+'%'}</td>
+      <td class="dim">${m.streak?'—':(m.pct?(100*best).toFixed(0)+'%':best.toFixed(2))}</td>
+      <td><input type="number" min="1" style="width:70px" data-mtarget="${m.type}" value="${prev.target||''}" placeholder="—"></td>
+    </tr>`;
+  }).join('');
+}
+function mSelected(){
+  return MBANK.filter(m=>document.querySelector(`input[data-mt="${m.type}"]`)?.checked)
+    .map(m=>({m,target:Math.max(1,+document.querySelector(`input[data-mtarget="${m.type}"]`).value||1)}));
+}
+document.getElementById('mSuggest').onclick=()=>{
+  const pool=FILTERED.length?FILTERED:DECKS;
+  const K=Math.max(1,+document.getElementById('mK').value||5);
+  for(const m of MBANK){
+    const cb=document.querySelector(`input[data-mt="${m.type}"]`);
+    if(!cb||!cb.checked)continue;
+    const avg=pool.reduce((a,d)=>a+mVal(d,m),0)/(pool.length||1);
+    const t=m.streak?2:Math.max(1,Math.round(0.75*K*avg));
+    document.querySelector(`input[data-mtarget="${m.type}"]`).value=t;
+  }
+};
+document.getElementById('mBuild').onclick=()=>{
+  const err=document.getElementById('mErr');err.textContent='';
+  const sel=mSelected();
+  if(!sel.length){err.textContent='Tick at least one mission first.';return;}
+  const K=Math.max(1,Math.min(30,+document.getElementById('mK').value||5));
+  const pool=FILTERED.length?FILTERED:DECKS;
+  // greedy: each pick maximises progress toward the still-open targets
+  const counting=sel.filter(s=>!s.m.streak);
+  const remaining=counting.map(s=>s.target);
+  const streakSel=sel.find(s=>s.m.streak);
+  const used=new Set(),chosen=[];
+  for(let k=0;k<K;k++){
+    let best=null,bestScore=-1;
+    for(const d of pool){
+      if(used.has(String(d.deck_id)))continue;
+      let score=0;
+      counting.forEach((s,i)=>{score+=Math.min(mVal(d,s.m),remaining[i])/s.target;});
+      if(streakSel)score+=0.35*mVal(d,streakSel.m);   // streaks want high match-win odds
+      if(score>bestScore){bestScore=score;best=d;}
+    }
+    if(!best)break;
+    used.add(String(best.deck_id));chosen.push(best);
+    counting.forEach((s,i)=>{remaining[i]=Math.max(0,remaining[i]-mVal(best,s.m));});
+  }
+  if(streakSel)chosen.sort((a,b)=>mVal(b,streakSel.m)-mVal(a,streakSel.m)); // best odds first
+  if(JOURNEY.list.length&&!confirm(`Replace the current journey (${JOURNEY.list.length} decks) with these ${chosen.length}?`))return;
+  JOURNEY.list=chosen.map(d=>({id:String(d.deck_id),res:null}));
+  jSave();journeyRender();
+  // completion preview
+  const rows=sel.map(s=>{
+    if(s.m.streak){
+      const p=streakProb(chosen.map(d=>mVal(d,s.m)),s.target);
+      return {label:`${s.m.label} ≥${s.target}`,target:s.target,
+        exp:(100*p).toFixed(0)+'% chance',ok:p>=0.5,stage:'—'};
+    }
+    let cum=0,stage='not reached';
+    for(let i=0;i<chosen.length;i++){cum+=mVal(chosen[i],s.m);
+      if(cum>=s.target&&stage==='not reached')stage='stage '+(i+1);}
+    return {label:s.m.label+' × '+s.target,target:s.target,
+      exp:cum.toFixed(2)+' expected',ok:cum>=s.target,stage};
+  });
+  document.getElementById('mResult').innerHTML=
+    `<div class="afterpanel" style="display:block;margin-top:16px">
+      <h3>Journey built — ${chosen.length} decks loaded</h3>
+      <p>Expected mission delivery across the journey (weighted sim). Open the Journey tab for curves, the per-stage mission matrix and drag-reordering; Play journey to run it.</p>
+      <table><thead><tr><th style="text-align:left">Mission</th><th>Expected</th><th>Covered by</th><th>OK</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td style="text-align:left">${r.label}</td><td>${r.exp}</td>
+        <td>${r.stage}</td><td class="${r.ok?'delta-up':'delta-down'}">${r.ok?'✓':'✗ raise decks or lower target'}</td></tr>`).join('')}</tbody></table>
+      <p class="secnote" style="margin-top:8px">Decks: ${chosen.map(d=>d.deck_id).join(' · ')}</p>
+    </div>`;
+};
+document.getElementById('mExport').onclick=()=>{
+  const err=document.getElementById('mErr');err.textContent='';
+  const sel=mSelected();
+  if(!sel.length){err.textContent='Tick at least one mission first.';return;}
+  if(sel.length>5){err.textContent='The spec serves at most dailyCap = 5 missions per chain — untick down to 5.';return;}
+  const missions=sel.map((s,i)=>({index:i+1,type:s.m.type,target:s.target,
+    reward:{bonusCash:+(0.10+0.10*i).toFixed(2),mission_token:5+5*i}}));
+  const cfg={version:1,configType:'scripted',configId:'dm_deckroom_generated',
+    miniCurrency:{id:'mission_token',display:'Mission Token'},
+    dailyMissions:{visibleSlots:3,dailyCap:5},
+    rotation:['chain_deckroom_1'],loop:true,
+    chains:{chain_deckroom_1:{label:'Deck Room — sim-validated',missions}},
+    weeklyProgression:{numberOfDays:7,tiers:[
+      {tier:1,tokensRequired:20,reward:{bonusCash:0.50}},
+      {tier:2,tokensRequired:45,reward:{bonusCash:1.00}},
+      {tier:3,tokensRequired:75,reward:{bonusCash:2.00}},
+      {tier:4,tokensRequired:110,reward:{bonusCash:3.50,cosmetic:'week_badge'}}]}};
+  downloadJSON(cfg,'dm_deckroom_config.json');
+};
 
 // sticky table header offset = real nav height
 function setNavH(){document.documentElement.style.setProperty('--navh',
