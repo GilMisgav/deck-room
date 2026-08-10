@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Studio — Deck Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F0E; --panel:#121917; --panel2:#182220; --inset:#0D1311;
+    --line:#22302B; --line2:#2E4038;
+    --gold:#C9A55C; --gold-dim:#8a6f3a; --gold-soft:rgba(201,165,92,.14);
+    --win:#5BB98A; --lose:#C75950; --push:#98A6A0;
+    --text:#E4E9E5; --muted:#8B9A93;
+    --serif:'Fraunces',Georgia,serif; --sans:'Archivo',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased}
+  body{padding:0 0 80px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+    flex-wrap:wrap;padding:28px 0 18px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 6px}
+  h1{font-family:var(--serif);font-weight:600;font-style:italic;font-size:38px;margin:0;line-height:1}
+  h1 .fl{color:var(--gold)}
+  .meta{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+  .meta a{color:var(--gold);text-decoration:none}
+  h2{font-family:var(--serif);font-style:italic;font-weight:500;font-size:20px;margin:30px 0 10px}
+  h2 small{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--muted);
+    letter-spacing:.06em;margin-left:10px}
+
+  button{font-family:var(--sans);font-weight:600;font-size:12.5px;cursor:pointer;border-radius:8px;
+    padding:8px 14px;border:1px solid var(--line);background:var(--panel2);color:var(--text);transition:.12s}
+  button:hover:not(:disabled){border-color:var(--gold)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.primary{background:var(--gold);border-color:var(--gold);color:#141006}
+  input[type=number]{background:var(--inset);border:1px solid var(--line);color:var(--text);
+    padding:5px 7px;border-radius:6px;font-family:var(--mono);font-size:12px;width:58px}
+  input:focus{outline:none;border-color:var(--gold)}
+  input[type=number]:disabled{opacity:.55;color:var(--gold)}
+  select{background:var(--inset);border:1px solid var(--line);color:var(--text);
+    padding:5px 7px;border-radius:6px;font-family:var(--mono);font-size:11.5px}
+  select:focus{outline:none;border-color:var(--gold)}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0}
+  .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .err{color:var(--lose);font-family:var(--mono);font-size:12px;min-height:16px}
+  .ok{color:var(--win)}
+
+  /* day chips */
+  .daychip{font-family:var(--mono);font-size:12px;border-radius:999px;padding:7px 14px}
+  .daychip.on{background:var(--gold);border-color:var(--gold);color:#141006;font-weight:700}
+  .daychip .n{opacity:.7;margin-left:6px}
+
+  /* bank */
+  .bank{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .cat h3{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 8px}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:.1s;position:relative}
+  .mcard:hover{border-color:var(--gold)}
+  .mcard .nm{font-size:12.5px;font-weight:600}
+  .mcard .st{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+  .mcard .st b{color:var(--text);font-weight:600}
+  .mcard .used{position:absolute;top:7px;right:9px;font-family:var(--mono);font-size:10px;
+    background:var(--gold);color:#141006;border-radius:5px;padding:1px 6px;font-weight:700}
+
+  /* day cards */
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;margin-bottom:12px}
+  .day.active{border-color:var(--gold-dim)}
+  .dhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .dtag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--gold);
+    background:var(--gold-soft);border:1px solid var(--gold-dim);border-radius:6px;padding:3px 9px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:500}
+  th:first-child,td:first-child{text-align:left}
+  td{font-family:var(--mono)}
+  .pb{font-family:var(--mono);font-size:11px;font-weight:700;border-radius:5px;padding:2px 7px}
+  .pg{background:var(--win);color:#06231a}.pm{background:var(--gold);color:#141006}
+  .pr{background:var(--lose);color:#fff}
+  .x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px}
+  .x:hover{color:var(--lose)}
+  .dim{color:var(--muted)}
+  .decks{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px}
+  .tag{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;border-radius:4px;padding:1.5px 5px;vertical-align:1px}
+  .tag.open{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold-dim)}
+  .tag.q{background:var(--inset);color:var(--muted);border:1px solid var(--line2)}
+  .adddaybig{display:block;width:100%;padding:12px;margin-bottom:12px;cursor:pointer;
+    background:none;border:1px dashed var(--line2);border-radius:12px;color:var(--muted);
+    font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  .adddaybig:hover{border-color:var(--gold);color:var(--gold)}
+  .plan{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;overflow-x:auto}
+  .drow{cursor:pointer}
+  .drow:hover td{background:rgba(201,165,92,.05)}
+  .drow.on td{background:rgba(201,165,92,.09)}
+  .plan .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:6px}
+  .plan th,.plan td{text-align:left;padding:5px 8px}
+  .mb{position:relative;min-width:88px;height:17px;background:var(--inset);
+    border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .mb i{position:absolute;top:0;bottom:0;left:0;opacity:.85}
+  .mb.g i{background:var(--win)}.mb.m i{background:var(--gold)}.mb.r i{background:var(--lose);opacity:.55}
+  .mb.gd i{background:#1E5C40}
+  .mb b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:9.5px;font-weight:700;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.55)}
+
+  /* chest bar */
+  .metabar{position:relative;height:100px;margin:8px 0 2px;padding:0 26px}
+  .track{position:absolute;top:50px;left:26px;right:26px;height:15px;background:var(--inset);
+    border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .fmax{position:absolute;top:0;bottom:0;left:0;background:rgba(239,230,208,.13)}
+  .fexp{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+  .cmk{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;
+    font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
+  .cmk i{font-style:normal;font-size:16px;line-height:1}
+  .cmk b{color:var(--text)} .cmk.hit b{color:var(--gold)}
+  .cmk:not(.hit) i{opacity:.45;filter:grayscale(1)}
+  .cmk::after{content:"";width:1px;height:8px;background:var(--line2)}
+  .dmk{position:absolute;top:71px;transform:translateX(-50%);font-family:var(--mono);
+    font-size:9px;color:var(--muted)}
+  .dmk::before{content:"";position:absolute;left:50%;top:-6px;width:1px;height:6px;background:var(--line2)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  /* schedule gantt */
+  .gday{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;margin-bottom:14px}
+  .gtitle{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+  .gtitle .dt{font-family:var(--serif);font-style:italic;font-size:17px}
+  .gtitle .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .contrib td:first-child{color:var(--gold)}
+  .note{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.5}
+  svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;
+    color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:3px;margin-right:5px}
+  footer{margin-top:50px;border-top:1px solid var(--line);padding-top:12px;
+    font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.04em;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <p class="eyebrow">Deck Room · Side Bets</p>
+    <h1><span class="fl">Mission</span> Studio</h1>
+  </div>
+  <div class="meta">
+    <b id="poolN">—</b> decks · 29-mission bank · reasonable-player sim<br>
+    <a href="index.html">← Deck Room</a>
+  </div>
+</header>
+
+<div class="bar" style="margin-top:14px;border-bottom:1px solid var(--line);padding-bottom:12px">
+  <button class="primary" id="tabStudio">Studio</button>
+  <button id="tabSched" title="Per-day timeline: which decks are served, when each mission enters and when it should be done">Daily schedule</button>
+</div>
+
+<div id="vStudio">
+<div class="bar">
+  <span class="lbl">Days</span>
+  <span id="dayChips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+  <button id="addDay">+ Day</button><button id="addDay3">+ 3 Days</button>
+  <span class="lbl" style="margin-left:14px">Decks / day</span>
+  <input type="number" id="decksPerDay" value="3" min="1" max="40">
+  <span class="lbl" title="missions visible at once — the next queued mission enters only when one completes and starts counting from that moment">Slots</span>
+  <input type="number" id="slotsN" value="3" min="1" max="5">
+  <span class="lbl" title="real-money stake per match — converts mission bonus cash into RTP points for the RTP+B column (token $ value comes from the chest path)">Stake $</span>
+  <input type="number" id="stakeN" value="1" min="0.05" step="0.05" style="width:64px">
+  <button class="primary" id="fitAll">Fit decks</button>
+  <button id="exportBtn">Export bundle</button>
+  <button id="exportJson" title="download the full Studio configuration (days, missions, dues, decks, chests, ranges, overrides) as a machine-readable JSON">Plan JSON</button>
+  <button id="shareBtn" title="Copy a link that opens this exact plan (days, targets, decks, chests)">Share link</button>
+  <button id="clearAll">Clear</button>
+  <span class="lbl" style="margin-left:14px">Suits</span>
+  <button id="suitClient" title="How the SHIPPED client paints suits: position % 4 (Card.swift parseServerDeck). Cards dealt together never share a suit — 6 bank types are impossible. Use this for real bundles.">Client (shipped)</button>
+  <button id="suitRandom" title="Real-cards assumption: random suit arrangement per run. Use only if the client's suit painting changes.">Random</button>
+  <span id="liveChip" style="margin-left:auto;display:inline-flex;gap:6px;align-items:center;font-family:var(--mono);font-size:11px"></span>
+</div>
+<div class="err" id="err"></div>
+
+<h2>Bank <small>click a mission to add it to the selected day · rate = expected events per match</small></h2>
+<div class="bank" id="bank"></div>
+
+<h2>Days <small>target &amp; tokens are editable · P = chance to complete with the fitted decks</small></h2>
+<div id="days"></div>
+
+<h2>Chest path <small>tokens from completed missions fill the bar · 2–5 chests</small></h2>
+<div class="panel">
+  <div class="bar" style="margin:0 0 4px">
+    <button id="chestAdd">+ chest</button>
+    <button id="chestAuto">Auto-space 3</button>
+    <span class="lbl" id="tokInfo"></span>
+  </div>
+  <div id="chestBar"></div>
+  <table id="chestTbl" style="max-width:760px"><thead><tr>
+    <th>#</th><th title="anchor the chest to a point: fixed tokens, end of a day, or a global match number — day/match derive the token threshold from the expected tokens collected by that point">Unlock by</th>
+    <th>Tokens</th><th>Bonus $</th><th>Unlocks (exp.)</th><th></th>
+  </tr></thead><tbody></tbody></table>
+</div>
+
+<h2>Effort <small>matches demanded per day · spacing between chest milestones</small></h2>
+<div class="panel">
+  <div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+    <div>
+      <div class="cap" style="margin-bottom:6px">Per day — matches to finish vs allotted</div>
+      <div id="effDays"></div>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom:6px">Between chests — matches per milestone</div>
+      <div id="effChests"></div>
+    </div>
+    <div>
+      <div class="cap" style="margin-bottom:6px">Matches vs missions completed — one line per day</div>
+      <div id="effDone"></div>
+    </div>
+  </div>
+</div>
+
+<h2>Completion curves <small>P(mission done) vs matches played — selected day</small></h2>
+<div class="panel" id="curves"></div>
+</div><!-- /vStudio -->
+
+<div id="vSched" style="display:none">
+  <div class="bar">
+    <span class="lbl">Mode</span>
+    <button class="primary" id="mPersonal" title="Scripted first days — the exact fitted decks, in serve order">Personal · fitted decks</button>
+    <button id="mCalendric" title="After the first days — calendar missions sized on pool expectations (any deck the player gets)">Calendric · pool expectations</button>
+    <span id="calCtl" style="display:none;gap:8px;align-items:center">
+      <span class="lbl">start</span><input type="date" id="calStart"
+        style="background:var(--inset);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:5px 7px;font-family:var(--mono);font-size:12px">
+      <span class="lbl">matches / day</span><input type="number" id="calMpd" value="3" min="1" max="20">
+      <button id="exportCal" title="Export these days as a calendric bundle (no fitted decks — pool-expectation targets)">Export calendric bundle</button>
+    </span>
+  </div>
+  <p class="note" style="margin-bottom:12px">▸ = mission enters the visible slots (3 at a time — the next one appears when one completes) · bar ends where the expected events reach the target · red edge = not expected to finish that day. Personal mode plays the fitted decks in order; calendric sizes everything on the pool average.</p>
+  <div id="schedDays"></div>
+</div>
+
+<footer>
+  MISSION STUDIO · 29-type bank per Side Bets–Missions PRD (type strings enforced by validate_bundle.py) ·
+  rates = weighted mean over seeded “reasonable player” runs (basic strategy + human deviations: 16v10 stands, skipped doubles/splits) ·
+  suits: default = the shipped client's painting (position % 4, Card.swift) under which 6 bank types are impossible; Random mode = expectation over real-card arrangements ·
+  export = personal scripted bundle with content-addressed UIDs (bnd/cfg/chn.sha1/msn/tier)
+</footer>
+</div>
+
+<script>document.write('<script src="data.js?v='+Date.now()+'"><\/script>');</script>
+<script>
+'use strict';
+/* ═══════════════ data ═══════════════ */
+const RAW=window.DECK_DATA;
+const IX=Object.fromEntries(RAW.fields.map((f,i)=>[f,i]));
+const DECKS=RAW.rows.map(r=>({deck_id:r[IX.deck_id],cards:r[IX.cards]}));
+const BYID=new Map(DECKS.map(d=>[String(d.deck_id),d]));
+document.getElementById('poolN').textContent=DECKS.length.toLocaleString();
+const fmt=n=>n==null?'—':(+n).toLocaleString('en-US');
+
+/* ═══════════════ engine: book strategy + reasonable player ═══════════════ */
+const RANKVAL={A:11,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,T:10,J:10,Q:10,K:10};
+const TEN=c=>'TJQK'.includes(c);
+function total(cs){let t=0,a=0;for(const c of cs){t+=RANKVAL[c];if(c==='A')a++;}
+  while(t>21&&a>0){t-=10;a--;}return[t,a>0&&t<=21];}
+function strategy(p,up,cd,cs){
+  const[t,soft]=total(p);
+  if(cs&&p.length===2&&RANKVAL[p[0]]===RANKVAL[p[1]]){
+    const r=RANKVAL[p[0]];
+    if(p[0]==='A')return'P';if(r===10)return'S';
+    if(r===9)return[2,3,4,5,6,8,9].includes(up)?'P':'S';
+    if(r===8)return'P';if(r===7)return up<=7?'P':'H';
+    if(r===6)return up<=6?'P':'H';if(r===5)return(up<=9&&cd)?'D':'H';
+    if(r===4)return(up===5||up===6)?'P':'H';return up<=7?'P':'H';
+  }
+  if(soft){
+    if(t>=19)return'S';
+    if(t===18){if([3,4,5,6].includes(up))return cd?'D':'S';if([2,7,8].includes(up))return'S';return'H';}
+    if(t===17)return([3,4,5,6].includes(up)&&cd)?'D':'H';
+    if(t>=15)return([4,5,6].includes(up)&&cd)?'D':'H';
+    if(t>=13)return([5,6].includes(up)&&cd)?'D':'H';return'H';
+  }
+  if(t>=17)return'S';if(t>=13)return up<=6?'S':'H';
+  if(t===12)return[4,5,6].includes(up)?'S':'H';
+  if(t===11)return cd?'D':'H';if(t===10)return(up<=9&&cd)?'D':'H';
+  if(t===9)return([3,4,5,6].includes(up)&&cd)?'D':'H';return'H';
+}
+function mulberry32(seed){let a=seed>>>0;return function(){a|=0;a=(a+0x6D2B79F5)|0;
+  let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return((t^(t>>>14))>>>0)/4294967296;};}
+function hashSeed(...p){let h=0x811c9dc5;
+  for(const x of p){h^=(x>>>0);h=Math.imul(h,0x01000193);h^=h>>>13;}return h>>>0;}
+function reasonable(rng){
+  function core(cards,up,cd,cs){
+    let a=strategy(cards,up,cd,cs);
+    const[t,soft]=total(cards);
+    if(a==='P'){const r=RANKVAL[cards[0]];
+      if(r===11)return'P';
+      if(rng()<((r===8&&up>=9)?0.40:0.35))return core(cards,up,cd,false);
+      return'P';}
+    if(a==='D'&&rng()<(soft?0.55:t===9?0.45:0.30))a='H';
+    if(a==='H'){
+      if(!soft){
+        if(t===16&&up>=9&&rng()<0.45)return'S';
+        if(t===15&&up>=10&&rng()<0.35)return'S';
+        if(t===12&&(up===2||up===3)&&rng()<0.30)return'S';
+      }else if(t===18&&up>=9&&rng()<0.50)return'S';
+    }
+    if(a==='S'&&!soft&&t===12&&up>=4&&up<=6&&rng()<0.25)return'H';
+    return a;
+  }
+  return core;
+}
+// one match: classic game flow (P1,P2,Dup,hole · naturals flat pre-bet · S17 ·
+// split max 2 by value · DAS · last hand starts at ≤12 cards). Log per round:
+// {at, hands:[{cards,acts,res}], dealer, split}
+function playMatch(seq,decide){
+  let pos=0,bk=3000,deb=0,cred=0;const log=[];
+  while(true){
+    if(bk<=0||seq.length-pos<4)break;
+    const last=(seq.length-pos)<=12,at=pos;
+    const p=[seq[pos++],seq[pos++]],d=[seq[pos++],seq[pos++]];
+    const up=RANKVAL[d[0]];
+    const pbj=total(p)[0]===21,dbj=total(d)[0]===21;
+    if(pbj||dbj){
+      if(pbj&&!dbj){bk+=500;cred+=500;}
+      else if(dbj&&!pbj){const dd=Math.min(250,bk);bk-=dd;deb+=dd;}
+      log.push({at,hands:[{cards:p,acts:[],res:pbj?(dbj?'push':'WIN'):'lose'}],dealer:d,split:false});
+      if(last)break;continue;
+    }
+    const bet=Math.min(100,bk);bk-=bet;deb+=bet;
+    const hands=[{cards:p,bet,dbl:false,sA:false,acts:[]}];
+    for(let i=0;i<hands.length;i++){
+      const h=hands[i];
+      while(true){
+        if(h.sA)break;
+        const t=total(h.cards)[0];if(t>=21)break;
+        const cs=hands.length<2&&h.cards.length===2&&RANKVAL[h.cards[0]]===RANKVAL[h.cards[1]]
+          &&bk>=h.bet&&seq.length-pos>=2;
+        const cd=h.cards.length===2&&!h.dbl&&bk>=h.bet&&pos<seq.length;
+        const a=decide(h.cards,up,cd,cs);
+        if(a==='P'&&cs){bk-=h.bet;deb+=h.bet;
+          const ace=h.cards[0]==='A',c=h.cards.pop();
+          const nh={cards:[c],bet:h.bet,dbl:false,sA:ace,acts:[]};
+          h.cards.push(seq[pos++]);nh.cards.push(seq[pos++]);
+          h.acts.push('split');hands.push(nh);
+          if(ace){h.sA=true;break;}continue;}
+        if(a==='D'&&cd){bk-=h.bet;deb+=h.bet;h.bet*=2;h.dbl=true;
+          h.cards.push(seq[pos++]);h.acts.push('dbl');break;}
+        if(a==='H'){if(pos>=seq.length)break;h.cards.push(seq[pos++]);continue;}
+        break;
+      }
+    }
+    const allBust=hands.every(h=>total(h.cards)[0]>21);
+    if(!allBust)while(total(d)[0]<17&&pos<seq.length)d.push(seq[pos++]);
+    const dt=total(d)[0],db=dt>21;
+    for(const h of hands){
+      const t=total(h.cards)[0];
+      h.res=t>21?'bust':(db||t>dt)?'WIN':t<dt?'lose':'push';
+      if(h.res==='WIN'){bk+=h.bet*2;cred+=h.bet*2;}
+      else if(h.res==='push'){bk+=h.bet;cred+=h.bet;}
+    }
+    log.push({at,hands:hands.map(h=>({cards:h.cards,acts:h.acts,res:h.res})),
+      dealer:d,split:hands.length===2});
+    if(last)break;
+  }
+  log.deb=deb;log.cred=cred;              // money out / money back → RTP = cred/deb
+  return log;
+}
+// suits: the server deck is rank-only. Two models:
+//   client — how the SHIPPED client paints suits: suits[position % 4]
+//            (Card.swift parseServerDeck). Cards dealt together never share
+//            a suit → 6 bank types are impossible. This is the default.
+//   random — real-cards assumption: each rank's four copies get shuffled
+//            suits per run (expectation over arrangements).
+let SUIT_MODEL=(()=>{try{return localStorage.getItem('studio_suits')||'client';}
+  catch(e){return 'client';}})();
+function suitMap(seq,rng){
+  const S=new Array(seq.length);
+  if(SUIT_MODEL==='client'){
+    for(let i=0;i<seq.length;i++)S[i]=i%4;   // hearts,diamonds,clubs,spades cycle
+    return S;
+  }
+  const by={};
+  seq.forEach((c,i)=>{(by[c]=by[c]||[]).push(i);});
+  for(const r in by){
+    const s=[0,1,2,3];
+    for(let i=3;i>0;i--){const j=Math.floor(rng()*(i+1));[s[i],s[j]]=[s[j],s[i]];}
+    by[r].forEach((p,k)=>S[p]=s[k]);
+  }
+  return S;
+}
+// client suit order is [hearts,diamonds,clubs,spades] → 0,1 red · 2,3 black
+const COLOR=s=>s>>1;
+
+/* ═══════════════ the 29-mission bank ═══════════════ */
+function straightN(cards){
+  const RO={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14};
+  const vs=[...new Set(cards.map(c=>RO[c]))];
+  if(vs.length!==cards.length)return false;
+  const run=a=>{a.sort((x,y)=>x-y);return a[a.length-1]-a[0]===a.length-1;};
+  if(run([...vs]))return true;
+  if(vs.includes(14))return run(vs.map(v=>v===14?1:v));
+  return false;
+}
+const cnts=cs=>{const c={};cs.forEach(x=>c[x]=(c[x]||0)+1);return Object.values(c);};
+const isW=h=>h.res==='WIN';
+// each: [type, label, category, f(r, deal ranks D, deal suits S)]
+const M29=[
+ ['open_any_pair','Any Pair','Opening',(r,D,S)=>D[0]===D[1]],
+ ['open_mixed_pair','Mixed Pair','Opening',(r,D,S)=>D[0]===D[1]&&COLOR(S[0])!==COLOR(S[1])],
+ ['open_colored_pair','Colored Pair','Opening',(r,D,S)=>D[0]===D[1]&&COLOR(S[0])===COLOR(S[1])&&S[0]!==S[1]],
+ ['open_same_suit','Same Suit','Opening',(r,D,S)=>S[0]===S[1]],
+ ['open_same_color','Same Color','Opening',(r,D,S)=>COLOR(S[0])===COLOR(S[1])],
+ ['open_blackjack','Blackjack','Opening',(r,D,S)=>(D[0]==='A'&&TEN(D[1]))||(D[1]==='A'&&TEN(D[0]))],
+ ['open_suited_blackjack','Suited Blackjack','Opening',(r,D,S)=>((D[0]==='A'&&TEN(D[1]))||(D[1]==='A'&&TEN(D[0])))&&S[0]===S[1]],
+ ['open_pocket_aces','Pocket Aces','Opening',(r,D,S)=>D[0]==='A'&&D[1]==='A'],
+ ['open_hard_20','Hard 20','Opening',(r,D,S)=>TEN(D[0])&&TEN(D[1])],
+ ['open_start_11','Starting 11','Opening',(r,D,S)=>D[0]!=='A'&&D[1]!=='A'&&RANKVAL[D[0]]+RANKVAL[D[1]]===11],
+ ['plus3_pair','Pair (21+3)','21+3',(r,D,S)=>new Set(D.slice(0,3)).size<=2],
+ ['plus3_flush','Flush (21+3)','21+3',(r,D,S)=>S[0]===S[1]&&S[1]===S[2]],
+ ['plus3_straight','Straight (21+3)','21+3',(r,D,S)=>straightN(D.slice(0,3))],
+ ['plus3_trips','Trips (21+3)','21+3',(r,D,S)=>new Set(D.slice(0,3)).size===1],
+ ['plus3_straight_flush','Straight Flush (21+3)','21+3',(r,D,S)=>straightN(D.slice(0,3))&&S[0]===S[1]&&S[1]===S[2]],
+ ['four_two_pair','Two Pair (4c)','Four cards',(r,D,S)=>{const v=cnts(D);return v.length===2&&v[0]===2;}],
+ ['four_trips','Trips (4c)','Four cards',(r,D,S)=>Math.max(...cnts(D))===3],
+ ['four_flush','Flush (4c)','Four cards',(r,D,S)=>S.every(s=>s===S[0])],
+ ['four_straight','Straight (4c)','Four cards',(r,D,S)=>straightN(D)],
+ ['four_straight_flush','Straight Flush (4c)','Four cards',(r,D,S)=>straightN(D)&&S.every(s=>s===S[0])],
+ ['four_quads','Quads (4c)','Four cards',(r,D,S)=>new Set(D).size===1],
+ ['reach_21','Reach 21 (3+ cards)','Gameplay',r=>r.hands.some(h=>h.cards.length>=3&&total(h.cards)[0]===21)],
+ ['win_5plus_cards','Win with 5+ cards','Gameplay',r=>r.hands.some(h=>isW(h)&&h.cards.length>=5)],
+ ['win_6plus_cards','Win with 6+ cards','Gameplay',r=>r.hands.some(h=>isW(h)&&h.cards.length>=6)],
+ ['win_after_double','Win after Double','Gameplay',r=>r.hands.some(h=>h.acts.includes('dbl')&&isW(h))],
+ ['win_split_hand','Win Split Hand','Gameplay',r=>r.split&&r.hands.some(isW)],
+ ['dealer_bust','Dealer Bust','Dealer',r=>total(r.dealer)[0]>21],
+ ['dealer_bust_5plus','Dealer Bust 5+','Dealer',r=>total(r.dealer)[0]>21&&r.dealer.length>=5],
+ ['dealer_bust_6plus','Dealer Bust 6+','Dealer',r=>total(r.dealer)[0]>21&&r.dealer.length>=6],
+];
+const MI=Object.fromEntries(M29.map((m,i)=>[m[0],i]));
+
+// per-deck expected events per mission (mean over seeded runs, suits re-drawn per run)
+const RCACHE=new Map();
+function deckRates(deck,runs){
+  runs=runs||30;
+  const key=deck.deck_id+'|'+runs+'|'+SUIT_MODEL;
+  if(RCACHE.has(key))return RCACHE.get(key);
+  const seq=deck.cards.split('');
+  const bid=BigInt(deck.deck_id);
+  const base=hashSeed(Number(bid&0xffffffffn),Number(bid>>32n));
+  const acc=new Array(29).fill(0);
+  for(let k=0;k<runs;k++){
+    const log=playMatch(seq,reasonable(mulberry32(hashSeed(0x5EED,base,k))));
+    const S=suitMap(seq,mulberry32(hashSeed(0x50175,base,k)));
+    for(const r of log){
+      const D=[seq[r.at],seq[r.at+1],seq[r.at+2],seq[r.at+3]];
+      const DS=[S[r.at],S[r.at+1],S[r.at+2],S[r.at+3]];
+      M29.forEach((m,i)=>{if(m[3](r,D,DS))acc[i]++;});
+    }
+  }
+  const out=acc.map(v=>v/runs);
+  RCACHE.set(key,out);
+  if(RCACHE.size>3000)RCACHE.clear();
+  return out;
+}
+// per-deck gameplay KPIs from the same seeded reasonable-player runs
+const KCACHE=new Map();
+function deckKPIs(deck,runs){
+  runs=runs||30;
+  const key=deck.deck_id+'|'+runs;
+  if(KCACHE.has(key))return KCACHE.get(key);
+  const seq=deck.cards.split('');
+  const bid=BigInt(deck.deck_id);
+  const base=hashSeed(Number(bid&0xffffffffn),Number(bid>>32n));
+  let rounds=0,W=0,L=0,P=0,B=0,DB=0,R21=0,SP=0,DD=0,DW=0,rtpS=0,rtpN=0,debS=0,credS=0;
+  for(let k=0;k<runs;k++){
+    const log=playMatch(seq,reasonable(mulberry32(hashSeed(0x5EED,base,k))));
+    rounds+=log.length;
+    debS+=log.deb;credS+=log.cred;
+    if(log.deb>0){rtpS+=log.cred/log.deb;rtpN++;}
+    for(const r of log){
+      if(total(r.dealer)[0]>21)DB++;
+      if(r.split)SP++;
+      for(const h of r.hands){
+        if(h.res==='WIN')W++;
+        else if(h.res==='push')P++;
+        else{L++;if(h.res==='bust')B++;}
+        if(h.acts.includes('dbl')){DD++;if(h.res==='WIN')DW++;}
+        if(h.cards.length>=3&&total(h.cards)[0]===21)R21++;
+      }
+    }
+  }
+  const hands=Math.max(1,W+L+P);
+  const out={rounds:rounds/runs,winPct:W/hands,losePct:L/hands,pushPct:P/hands,
+    bustPct:B/hands,dbustPerM:DB/runs,r21PerM:R21/runs,splitPerM:SP/runs,
+    dblPerM:DD/runs,dblWinPct:DD?DW/DD:0,ratio:L?W/L:9,rtp:rtpN?rtpS/rtpN:1,
+    debM:debS/runs,credM:credS/runs};
+  KCACHE.set(key,out);
+  if(KCACHE.size>3000)KCACHE.clear();
+  return out;
+}
+// fun 0-100: near-even win feel + surprise events + agency (doubles/splits)
+function funScore(k){
+  const winComp=Math.max(0,1-Math.abs(k.winPct-0.46)/0.25);
+  const eventComp=Math.min(1,(k.r21PerM+k.dbustPerM*0.6+k.splitPerM)/2.5);
+  const actionComp=Math.min(1,(k.dblPerM+k.splitPerM)/2);
+  return Math.round(100*(0.45*winComp+0.35*eventComp+0.20*actionComp));
+}
+// effective fun / RTP: manual per-deck overrides beat the computed values
+const funOf=d=>{
+  const o=ST.funOverrides&&ST.funOverrides[String(d.deck_id)];
+  return o!=null?o:funScore(deckKPIs(d,30));
+};
+const rtpOf=d=>{
+  const o=ST.rtpOverrides&&ST.rtpOverrides[String(d.deck_id)];
+  return o!=null?o:deckKPIs(d,30).rtp;
+};
+const rtpColor=v=>v<=0.97?'var(--win)':v<=1.02?'var(--gold)':'var(--lose)';
+// $ value of one mission token, implied by the chest path (total cash ÷ last threshold)
+function chestTokenValue(){
+  const cs=[...(ST.chests||[])].sort((a,b)=>a.tokens-b.tokens);
+  if(!cs.length)return 0;
+  return cs.reduce((a,c)=>a+(+c.cash||0),0)/Math.max(1,cs[cs.length-1].tokens);
+}
+// pool averages from a fixed sample (for the bank display + defaults)
+const POOL_BY_MODEL={};let POOL_SAMPLE=[];
+function poolRates(){
+  if(POOL_BY_MODEL[SUIT_MODEL])return POOL_BY_MODEL[SUIT_MODEL];
+  const n=Math.min(120,DECKS.length);
+  POOL_SAMPLE=Array.from({length:n},(_,i)=>DECKS[Math.floor(i*DECKS.length/n)]);
+  const acc=new Array(29).fill(0);
+  for(const d of POOL_SAMPLE)deckRates(d,20).forEach((v,i)=>acc[i]+=v);
+  POOL_BY_MODEL[SUIT_MODEL]=acc.map(v=>v/n);
+  return POOL_BY_MODEL[SUIT_MODEL];
+}
+function poisAtLeast(lam,T){
+  if(T<=0)return 1;if(lam<=0)return 0;
+  let term=Math.exp(-lam),cdf=term;
+  for(let k=1;k<T;k++){term*=lam/k;cdf+=term;}
+  return Math.max(0,Math.min(1,1-cdf));
+}
+const medMatches=(rate,T)=>{if(rate<=0)return null;
+  for(let n=1;n<=999;n++)if(poisAtLeast(n*rate,T)>=0.5)return n;return null;};
+
+/* ═══════════════ state ═══════════════ */
+const SKEY='mission_studio';
+let ST=(()=>{try{const s=JSON.parse(localStorage.getItem(SKEY));
+  if(s&&Array.isArray(s.days))return s;}catch(e){}
+  return {days:[],chests:[],active:0};})();
+const save=()=>{try{localStorage.setItem(SKEY,JSON.stringify(ST));}catch(e){}
+  if(typeof livePush==='function')livePush();};
+const tokDefault=rate=>rate>=1.5?5:rate>=0.3?10:20;
+
+/* ═══════════════ math on days ═══════════════ */
+function dayRate(day,mi){                 // expected events across the day's decks
+  const ds=(day.decks||[]).map(id=>BYID.get(String(id))).filter(Boolean);
+  if(!ds.length)return null;              // no decks fitted yet → pool estimate
+  return ds.reduce((a,d)=>a+deckRates(d,30)[mi],0);
+}
+/* Slot-aware Monte Carlo: only the first `slots` missions are open at start;
+   a queued mission enters when one completes and accumulates ONLY from that moment. */
+const SIMCACHE=new Map();
+const strHash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;};
+function simDay(day,H,runs){
+  const ms=day.missions||[];if(!ms.length)return null;
+  const slots=Math.max(1,ST.slots||3);
+  const ids=(day.decks||[]).map(String);
+  const K=ids.length||day.deckCount||3;
+  H=H||Math.max(K,day.matches||0);runs=runs||300;   // matches beyond the fitted decks run on day-average rates
+  const key=JSON.stringify([ms.map(m=>m.type+':'+m.target),ids,K,H,runs,slots,SUIT_MODEL]);
+  if(SIMCACHE.has(key))return SIMCACHE.get(key);
+  const R=poolRates();
+  const deckR=ids.map(id=>{const d=BYID.get(id);return d?deckRates(d,30):null;});
+  const avg=ms.map(m=>{const rs=deckR.filter(Boolean).map(r=>r[MI[m.type]]);
+    return rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:R[MI[m.type]];});
+  const rateJM=(j,m)=>(m<deckR.length&&deckR[m])?deckR[m][MI[ms[j].type]]:avg[j];
+  const rng=mulberry32(hashSeed(0x51D5,strHash(key),runs));
+  const pois=lam=>{if(lam<=1e-9)return 0;const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=rng();}while(p>L);return k-1;};
+  const doneCnt=ms.map(()=>new Array(H).fill(0));
+  const progSum=ms.map(()=>new Array(H).fill(0));
+  const allCnt=new Array(H).fill(0);
+  const doneTimes=ms.map(()=>[]);
+  for(let r=0;r<runs;r++){
+    const prog=ms.map(()=>0),done=ms.map(()=>false);
+    const queue=ms.map((_,j)=>j),vis=[];
+    const serve=()=>{const fresh=[];while(vis.length<slots&&queue.length){
+      const j=queue.shift();vis.push(j);fresh.push(j);}return fresh;};
+    serve();
+    for(let m=0;m<H;m++){
+      const events=[];                              // [time-in-match, mission]
+      const addEv=(j,u0)=>{const c=pois(rateJM(j,m)*(1-u0));
+        for(let e=0;e<c;e++)events.push([u0+rng()*(1-u0),j]);};
+      for(const j of vis)addEv(j,0);
+      let tcur=0;
+      for(;;){                                      // process events in time order
+        let bi=-1,bt=Infinity;
+        for(let e=0;e<events.length;e++){const ev=events[e];
+          if(ev&&ev[0]>=tcur&&ev[0]<bt){bt=ev[0];bi=e;}}
+        if(bi<0)break;
+        const [u,j]=events[bi];events[bi]=null;tcur=u;
+        if(done[j])continue;
+        prog[j]++;
+        if(prog[j]>=ms[j].target){
+          done[j]=true;doneTimes[j].push(m+u);
+          vis.splice(vis.indexOf(j),1);
+          for(const nj of serve())addEv(nj,u);      // enters NOW, accrues only the rest of the match
+        }
+      }
+      let all=true;
+      ms.forEach((_,j)=>{progSum[j][m]+=Math.min(prog[j],ms[j].target);
+        if(done[j])doneCnt[j][m]++;else all=false;});
+      if(all)allCnt[m]++;
+    }
+  }
+  const half=Math.floor(runs/2);
+  const out={K,H,slots,runs,
+    pDone:ms.map((_,j)=>doneCnt[j][H-1]/runs),
+    doneByMatch:doneCnt.map(a=>a.map(v=>v/runs)),
+    avgProg:progSum.map(a=>a.map(v=>v/runs)),
+    allByMatch:allCnt.map(v=>v/runs),
+    medDone:ms.map((_,j)=>{const L=[...doneTimes[j]].sort((a,b)=>a-b);
+      return L.length>half?Math.max(1,Math.ceil(L[half])):null;})};
+  SIMCACHE.set(key,out);
+  if(SIMCACHE.size>300)SIMCACHE.clear();
+  return out;
+}
+function dayStats(day){
+  const ms=day.missions||[];
+  if(!ms.length)return {per:[],all:1,tokExp:0,tokMax:0,sim:null};
+  const sim=simDay(day);
+  const per=ms.map((m,j)=>({m,j,p:sim.pDone[j],med:sim.medDone[j]}));
+  return {per,sim,all:sim.allByMatch[sim.H-1],
+    tokExp:per.reduce((a,x)=>a+x.m.tokens*x.p,0),
+    tokMax:per.reduce((a,x)=>a+x.m.tokens,0)};
+}
+let EXT_SAMPLE=null;                        // wider sample for due-mission top-ups
+function extSample(){
+  if(EXT_SAMPLE)return EXT_SAMPLE;
+  const n=Math.min(280,DECKS.length);
+  EXT_SAMPLE=Array.from({length:n},(_,i)=>DECKS[Math.floor((i+0.5)*DECKS.length/n)]);
+  return EXT_SAMPLE;
+}
+const TOP3=new Map();                       // mean of the 3 richest / 3 poorest deck rates per type
+function rateBounds(type){
+  const key=type+'@'+SUIT_MODEL;
+  if(TOP3.has(key))return TOP3.get(key);
+  const src=EXT_SAMPLE?[...POOL_SAMPLE,...EXT_SAMPLE]:POOL_SAMPLE;
+  const rs=src.map(d=>deckRates(d,30)[MI[type]]).sort((a,b)=>b-a);
+  const v={top:((rs[0]||0)+(rs[1]||0)+(rs[2]||0))/3,
+    bottom:((rs[rs.length-1]||0)+(rs[rs.length-2]||0)+(rs[rs.length-3]||0))/3};
+  TOP3.set(key,v);return v;
+}
+const top3Rate=type=>rateBounds(type).top;
+function fitCandidates(day){
+  poolRates();                              // ensure POOL_SAMPLE exists
+  const set=new Map(POOL_SAMPLE.map(d=>[String(d.deck_id),d]));
+  // due missions of ANY category: add the richest decks from a wider 280-deck
+  // sample — the 120 sample alone often can't sustain aggressive dues
+  for(const m of day.missions||[]){
+    if(!m.due)continue;
+    const mi=MI[m.type];
+    if(poolRates()[mi]<=0)continue;
+    const ranked=extSample().map(d=>({d,r:deckRates(d,30)[mi]}))
+      .sort((a,b)=>b.r-a.r).slice(0,12);
+    TOP3.delete(m.type+'@'+SUIT_MODEL);     // recompute with the wider sample available
+    for(const {d} of ranked){const id=String(d.deck_id);if(!set.has(id))set.set(id,d);}
+  }
+  // targeted top-up: scan the WHOLE database for decks that fire a day mission on
+  // round 1 with certainty (round 1 always deals seq[0..3], so card-pattern types
+  // — Opening / 21+3 / Four cards — can be screened statically). This finds rare
+  // decks (e.g. an A,A opening) that a 120-deck sample almost never contains.
+  for(const m of day.missions||[]){
+    const idx=MI[m.type],cat=M29[idx][2],ev=M29[idx][3];
+    if(!['Opening','21+3','Four cards'].includes(cat))continue;
+    let found=0;
+    const fake={at:0,hands:[],dealer:[],split:false};
+    for(const d of DECKS){
+      if(found>=12)break;
+      const q=d.cards;
+      if(ev(fake,[q[0],q[1],q[2],q[3]],[0,1,2,3])){
+        const id=String(d.deck_id);
+        if(!set.has(id)){set.set(id,d);found++;}
+      }
+    }
+  }
+  return [...set.values()];
+}
+// fluid slot timeline over an arbitrary rate matrix — the fit's objective function
+function fluidEval(ms,rateRow,K,slots){
+  const st=ms.map(m=>({t:m.target,prog:0,done:null,serve:null}));
+  const vis=[],queue=ms.map((_,j)=>j);
+  const serveN=t=>{while(vis.length<slots&&queue.length){
+    const j=queue.shift();st[j].serve=t;vis.push(j);}};
+  let t=0;serveN(0);
+  for(let m=0;m<K;m++){
+    let guard=0;
+    while(t<m+1&&vis.length&&guard++<100){
+      let best=null,bt=Infinity;
+      for(const j of vis){const r=rateRow(j,m);if(r<=1e-9)continue;
+        const tc=t+(st[j].t-st[j].prog)/r;if(tc<bt){bt=tc;best=j;}}
+      if(best==null||bt>m+1){
+        for(const j of vis)st[j].prog+=rateRow(j,m)*(m+1-t);t=m+1;break;}
+      for(const j of vis)st[j].prog+=rateRow(j,m)*(bt-t);
+      t=bt;st[best].done=t;st[best].prog=st[best].t;
+      vis.splice(vis.indexOf(best),1);serveN(t);
+    }
+    t=Math.max(t,m+1);
+  }
+  return st;
+}
+// loss of a concrete deck list: squared due misses dominate, unfinished missions hurt
+function planLoss(ms,deckList,slots){
+  const R=poolRates();
+  const rates=deckList.map(id=>{const d=BYID.get(String(id));return d?deckRates(d,30):null;});
+  const rateRow=(j,k)=>rates[k]?rates[k][MI[ms[j].type]]:R[MI[ms[j].type]];
+  const st=fluidEval(ms,rateRow,deckList.length,slots);
+  let L=0;
+  ms.forEach((m,j)=>{
+    const s=st[j];
+    if(m.due){
+      if(s.done==null)L+=Math.pow(deckList.length+3-m.due,2)+10*(1-s.prog/m.target);
+      else{const miss=Math.ceil(s.done)-m.due;
+        L+=(miss<0?1.6:1)*miss*miss;}      // finishing EARLY is worse — it means we wasted pacing control
+    }else{
+      // probabilistic: the typical path alone hides fragile completions —
+      // penalise by log P(complete) over the mission's served window
+      let lam=0;
+      if(s.serve!=null)
+        for(let k2=Math.floor(s.serve);k2<deckList.length;k2++)lam+=rateRow(j,k2);
+      L-=3*Math.log(Math.max(s.serve==null?0:poisAtLeast(lam,m.target),1e-9));
+      if(s.done!=null)L+=0.02*s.done;      // mild preference for finishing free missions early
+    }
+  });
+  return L;
+}
+// fun / RTP range distance expressed in loss units (0 when inside the ranges)
+function constraintPenFn(day){
+  const lo=day.funMin??null,hi=day.funMax??null;
+  const rlo=day.rtpMin??null,rhi=day.rtpMax??null;
+  if(lo==null&&hi==null&&rlo==null&&rhi==null)return null;
+  return d=>{
+    const f=funOf(d),v=rtpOf(d);
+    const fd=Math.max(lo!=null?lo-f:0,hi!=null?f-hi:0,0);
+    const rd=Math.max(rlo!=null?rlo-v:0,rhi!=null?v-rhi:0,0);
+    return 0.03*fd*fd+400*rd*rd;
+  };
+}
+function fitDay(day,usedElsewhere){
+  const ms=day.missions||[];if(!ms.length)return;
+  const K=day.deckCount||+document.getElementById('decksPerDay').value||3;
+  const slots=Math.max(1,ST.slots||3);
+  let pool=fitCandidates(day);
+  // fun + RTP ranges: hard filter when enough candidates satisfy both,
+  // otherwise soft penalties so the fit degrades gracefully instead of failing
+  const lo=day.funMin??null,hi=day.funMax??null;
+  const rlo=day.rtpMin??null,rhi=day.rtpMax??null;
+  const funB=lo!=null||hi!=null,rtpB=rlo!=null||rhi!=null;
+  const fdist=d=>{const s=funOf(d);
+    return Math.max(lo!=null?lo-s:0,hi!=null?s-hi:0,0);};
+  const rdist=d=>{const v=rtpOf(d);
+    return Math.max(rlo!=null?rlo-v:0,rhi!=null?v-rhi:0,0);};
+  let funPenalty=null,rtpPenalty=null;
+  if(funB||rtpB){
+    const inR=pool.filter(d=>(!funB||fdist(d)===0)&&(!rtpB||rdist(d)===0));
+    if(inR.length>=K)pool=inR;
+    else{funPenalty=funB?fdist:null;rtpPenalty=rtpB?rdist:null;}
+  }
+  const used=usedElsewhere||new Set(ST.days.filter(d=>d!==day)
+    .flatMap(d=>d.decks||[]).map(String));
+  const R=poolRates();
+  const chosen=[];
+  // fluid slot state while we build the day, deck by deck
+  const vis=ms.slice(0,slots).map((_,j)=>j);
+  const queue=ms.map((_,j)=>j).slice(vis.length);
+  const cum=ms.map(()=>0),done=ms.map(()=>false);
+  const serveT=ms.map((_,j)=>j<slots?0:null);
+  for(let k=0;k<K;k++){
+    let best=null,bestS=-Infinity;
+    for(const d of pool){
+      const id=String(d.deck_id);
+      if(used.has(id)||chosen.includes(id))continue;
+      const r=deckRates(d,30);
+      let s=(funPenalty?-0.15*funPenalty(d):0)+(rtpPenalty?-30*rtpPenalty(d):0);
+      for(const j of vis){
+        const m=ms[j],T=m.target;
+        const proj=cum[j]+r[MI[m.type]];
+        if(m.due){
+          // pace toward completing exactly at deck `due`; finishing early is
+          // penalised harder than lagging so rare decks are saved for the end
+          const d0=serveT[j]??k;
+          const dd=Math.max(m.due,d0+1);
+          const ideal=T*Math.min(1,(k+1-d0)/(dd-d0));
+          const dev=(Math.min(proj,T)-ideal)/T;
+          // lagging gets more expensive as the due approaches (urgency), while
+          // finishing early stays expensive throughout
+          s-=(dev>0?8:2+8*Math.pow((k+1)/dd,2))*dev*dev;
+        }else{
+          const lam=proj+(K-k-1)*R[MI[m.type]];
+          s+=Math.log(Math.max(poisAtLeast(lam,T),1e-9));
+        }
+      }
+      if(s>bestS){bestS=s;best=d;}
+    }
+    if(!best)break;
+    chosen.push(String(best.deck_id));
+    const r=deckRates(best,30);
+    for(const j of [...vis]){
+      cum[j]+=r[MI[ms[j].type]];
+      if(cum[j]>=ms[j].target&&!done[j]){
+        done[j]=true;vis.splice(vis.indexOf(j),1);
+        while(vis.length<slots&&queue.length){
+          const nj=queue.shift();vis.push(nj);serveT[nj]=k+1;}
+      }
+    }
+  }
+  // refinement: local swaps against the actual slot timeline. The greedy pass
+  // can't revisit early picks, so due misses accumulate — two sweeps of
+  // best-swap-per-position fix most of them.
+  if(chosen.length){
+    const pen=constraintPenFn(day);
+    const penOf=new Map();
+    const penFor=id=>{if(!pen)return 0;
+      if(!penOf.has(id))penOf.set(id,pen(BYID.get(id))||0);
+      return penOf.get(id);};
+    const cand=pool.map(d=>String(d.deck_id))
+      .filter(id=>!used.has(id)&&BYID.has(id));
+    const tot=list=>planLoss(ms,list,slots)+list.reduce((a,id)=>a+penFor(id),0);
+    let bestL=tot(chosen);
+    for(let sweep=0;sweep<3;sweep++){
+      let improved=false;
+      for(let k=0;k<chosen.length;k++){
+        let bestId=chosen[k],bl=bestL;
+        for(const id of cand){
+          if(chosen.includes(id))continue;
+          const trial=chosen.slice();trial[k]=id;
+          const L=tot(trial);
+          if(L<bl-1e-9){bl=L;bestId=id;}
+        }
+        if(bestId!==chosen[k]){chosen[k]=bestId;bestL=bl;improved=true;}
+      }
+      if(!improved)break;
+    }
+  }
+  day.decks=chosen;
+  day.fitSig=daySig(day);          // remember what the decks were fitted FOR
+}
+const daySig=day=>(day.missions||[]).map(m=>m.type+':'+m.target+':'+(m.due||0)).join('|')
+  +'#'+(day.deckCount||3)+'@'+SUIT_MODEL+'&'+(ST.slots||3)
+  +'£'+(day.funMin??'')+'-'+(day.funMax??'')
+  +'₪'+(day.rtpMin??'')+'-'+(day.rtpMax??'')
+  +'¤'+Object.entries(ST.funOverrides||{}).map(([k,v])=>k+':'+v).join(',')
+  +'®'+Object.entries(ST.rtpOverrides||{}).map(([k,v])=>k+':'+v).join(','); // queue order, fun/rtp ranges and overrides all shape the fit
+
+/* ═══════════════ render ═══════════════ */
+const pcls=p=>p>=0.7?'pg':p>=0.35?'pm':'pr';
+const ptx=p=>(100*p).toFixed(0)+'%';
+let INSP=null;                             // open deck inspector: 'di:k' or null
+let SWAPMSG=null;                          // {key:'di:k', ok, text} — result of the last Replace deck
+function inspectorHTML(day,di,k,cols){     // KPI drill-down for the deck at position k
+  const id=String((day.decks||[])[k]),d=BYID.get(id);
+  if(!d)return '';
+  const kp=deckKPIs(d,30),funComp=funScore(kp);
+  const ovv=ST.funOverrides?ST.funOverrides[id]:null;
+  const fun=ovv!=null?ovv:funComp;
+  const R=poolRates();
+  const chip=(lbl,val,tip)=>`<div style="background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:7px 10px" title="${tip||''}">
+    <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">${lbl}</div>
+    <div style="font-family:var(--mono);font-size:14px;font-weight:700;margin-top:2px">${val}</div></div>`;
+  const qa=(day.missions||[]).map(m=>{
+    const r=deckRates(d,30)[MI[m.type]],pool=R[MI[m.type]];
+    const rel=pool>0?r/pool:0;
+    return `<tr><td>${M29[MI[m.type]][1]}</td>
+      <td style="font-family:var(--mono)"><b style="color:${r<=0?'var(--lose)':rel>=1.3?'var(--win)':rel<0.7?'var(--lose)':'var(--text)'}">${r.toFixed(2)}</b>/match</td>
+      <td class="dim" style="font-family:var(--mono)">${pool.toFixed(2)}/match</td>
+      <td class="dim" style="font-family:var(--mono)">${pool>0?'×'+rel.toFixed(1):'—'}</td></tr>`;}).join('');
+  return `<tr class="insp"><td colspan="${cols}" style="background:var(--inset);padding:12px 14px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">
+      ${chip('Fun'+(ovv!=null?' *manual':''),
+        `<span style="color:${fun>=70?'var(--win)':fun>=45?'var(--gold)':'var(--lose)'}">${fun}</span>
+         <input type="number" min="0" max="100" value="${ovv??''}" placeholder="${funComp}" data-funov="${id}"
+           style="width:52px;margin-left:6px" title="type a value to override this deck's fun score everywhere (fit, plan, ranges) — blank = back to the computed ${funComp}">`,
+        'computed '+funComp+' — near-even win feel + surprise events + agency. The override wins wherever fun is used.')}
+      ${(()=>{const rov=ST.rtpOverrides?ST.rtpOverrides[id]:null;
+        const rtpEff=rov!=null?rov:kp.rtp;
+        return chip('RTP'+(rov!=null?' *manual':''),
+        `<span style="color:${rtpColor(rtpEff)}">${rtpEff.toFixed(2)}</span>
+         <input type="number" min="0" max="3" step="0.01" value="${rov??''}" placeholder="${kp.rtp.toFixed(2)}" data-rtpov="${id}"
+           style="width:60px;margin-left:6px" title="type a value to override this deck's RTP everywhere (fit ranges, plan, cumulative) — blank = back to the computed ${kp.rtp.toFixed(2)}">`,
+        'computed '+kp.rtp.toFixed(2)+' — money returned ÷ money wagered. The override wins wherever RTP is used.');})()}
+      ${chip('Win ratio',kp.ratio.toFixed(2),'player hand wins ÷ losses (busts included)')}
+      ${chip('W / P / L',`${(100*kp.winPct).toFixed(0)}·${(100*kp.pushPct).toFixed(0)}·${(100*kp.losePct).toFixed(0)}%`,'share of hands won / pushed / lost')}
+      ${chip('Rounds',kp.rounds.toFixed(1)+'/match','rounds played per match')}
+      ${chip('Reach 21',kp.r21PerM.toFixed(1)+'/m','3+ card 21s per match')}
+      ${chip('Dealer bust',kp.dbustPerM.toFixed(1)+'/m','dealer busts per match')}
+      ${chip('Splits',kp.splitPerM.toFixed(1)+'/m','splits per match')}
+      ${chip('Doubles',`${kp.dblPerM.toFixed(1)}/m · ${(100*kp.dblWinPct).toFixed(0)}%W`,'doubles per match and their win rate')}
+      <span style="align-self:center;display:flex;gap:6px">
+        <button data-swap="${di}:${k}" title="re-pick the best deck for THIS position under the current constraints (fun/RTP ranges, overrides, due pacing), keeping every other deck">Replace deck ⟳</button>
+        <button data-play1="${id}" title="open just this deck in Deck Room">Play ↗</button>
+      </span>
+    </div>
+    ${SWAPMSG&&SWAPMSG.key===di+':'+k?`<div style="margin-top:10px;padding:7px 10px;border-radius:8px;font-size:12px;
+      background:${SWAPMSG.ok?'rgba(91,185,138,.12)':'rgba(199,89,80,.12)'};
+      border:1px solid ${SWAPMSG.ok?'var(--win)':'var(--lose)'};
+      color:${SWAPMSG.ok?'var(--win)':'var(--lose)'}">${SWAPMSG.ok?'✓ ':''}${SWAPMSG.text}</div>`:''}
+    <div class="cap" style="margin:12px 0 4px">QA per event — this deck vs pool average</div>
+    <table style="max-width:560px"><thead><tr><th>Mission</th><th>This deck</th><th>Pool</th><th>Rel.</th></tr></thead>
+    <tbody>${qa}</tbody></table>
+  </td></tr>`;
+}
+function deckPlanHTML(day,di){             // deck list, played in order, with slot-aware cumulative progress
+  const ids=(day.decks||[]).map(String);
+  if(!ids.length)return `<div class="decks">no decks yet — set "finish in" and press Fit decks</div>`;
+  const ms=day.missions||[];
+  if(!ms.length)return `<div class="decks">decks: ${ids.join(' · ')}</div>`;
+  const sim=simDay(day);                   // probabilities (300-run MC)
+  const tl=timelineForDay(day,'per');      // the TYPICAL path: when each mission actually enters
+  const slots=sim.slots;
+  const M=sim.H;                           // matches played (≥ fitted decks)
+  const nCols=ms.length+8;
+  const tokVal=chestTokenValue(),stake=ST.stake||1;
+  let prevExpTok=0,cumDeb=0,cumCred=0;
+  const kpsFit=ids.map(x=>BYID.get(x)).filter(Boolean).map(x=>deckKPIs(x,30));
+  const avgDeb=kpsFit.length?kpsFit.reduce((a,x)=>a+x.debM,0)/kpsFit.length:0;
+  const avgCred=kpsFit.length?kpsFit.reduce((a,x)=>a+x.credM,0)/kpsFit.length:0;
+  const rows=Array.from({length:M},(_,k)=>{
+    const real=k<ids.length;
+    const dk=real?BYID.get(ids[k]):null;
+    const id=real?ids[k]:`<span class="dim">any deck (pool)</span>`;
+    const kp=dk?deckKPIs(dk,30):null;
+    const fun=dk?funOf(dk):null;
+    const ov=dk&&ST.funOverrides&&ST.funOverrides[ids[k]]!=null;
+    const typTok=ms.reduce((a,m,j)=>a+(tl.ms[j].done!=null&&tl.ms[j].done<=k+1?m.tokens:0),0);
+    const expTok=ms.reduce((a,m,j)=>a+m.tokens*sim.doneByMatch[j][k],0);
+    const margTok=expTok-prevExpTok;prevExpTok=expTok;
+    const rov=dk&&ST.rtpOverrides?ST.rtpOverrides[ids[k]]:null;
+    const rtpEff=dk?rtpOf(dk):null;
+    const rtpB=kp?rtpEff+margTok*tokVal/stake:null;
+    cumDeb+=kp?kp.debM:avgDeb;
+    cumCred+=kp?(rov!=null?kp.debM*rov:kp.credM):avgCred;
+    const cumRtp=cumDeb>0?cumCred/cumDeb:null;
+    const cumB=cumRtp!=null?cumRtp+expTok*tokVal/(stake*(k+1)):null;
+    const cells=ms.map((m,j)=>{
+      const sv=tl.ms[j].serve,dn=tl.ms[j].done;
+      const p=sim.doneByMatch[j][k];
+      if(sv==null||sv>=k+1)                // hasn't entered a slot yet on the typical path
+        return `<td title="waiting in the queue — progress starts only when a mission above completes${sv!=null?` (typically enters in deck ${Math.floor(sv)+1})`:' (typically never enters within this day)'}">
+          <span class="dim" style="font-size:10px">in queue${sv!=null?` · d${Math.floor(sv)+1}`:''}</span></td>`;
+      const prog=Math.min(tl.snaps[k][j],m.target);
+      const doneHere=dn!=null&&dn<=k+1;
+      const w=Math.min(100,100*prog/m.target);
+      const dueTxt=m.due?(doneHere?(Math.ceil(dn)===m.due?` · on due d${m.due} ✓`:` · done but off the due you set (d${m.due})`):` · due d${m.due}`):'';
+      const cls=doneHere?(m.due&&Math.ceil(dn)!==m.due?'gd':'g'):p>=0.7?'g':p>=0.35?'m':'r';
+      return `<td title="typical path after deck ${k+1}: ${prog.toFixed(2)} of ${m.target}${doneHere?` — done in deck ${Math.ceil(dn)}`:''}${dueTxt} · entered deck ${Math.floor(sv)+1} · P(done by now) ${ptx(p)}">
+        <div class="mb ${cls}"><i style="width:${w}%"></i><b>${doneHere?'✓ d'+Math.ceil(dn):prog.toFixed(1)+' / '+m.target}</b></div></td>`;});
+    const open=INSP===di+':'+k;
+    return `<tr${real?` class="drow${open?' on':''}" data-insp="${di}:${k}" title="click for deck KPIs — fun, win ratio, events"`:''}>
+      <td class="dim">${k+1}</td><td>${id}</td>
+      <td${ov?' title="manual fun override — open the inspector to change or clear it"':''}>${fun==null?'<span class="dim">—</span>':`<span class="pb ${fun>=70?'pg':fun>=45?'pm':'pr'}">${fun}${ov?'*':''}</span>`}</td>
+      <td${rov!=null?' title="manual RTP override — open the inspector to change or clear it"':''}>${kp?`<b style="font-family:var(--mono);color:${rtpColor(rtpEff)}" title="return to player on this deck: money returned ÷ money wagered (flat-100 reasonable play, natural ±flat included)${rov!=null?' — manual override, computed '+kp.rtp.toFixed(2):''}">${rtpEff.toFixed(2)}${rov!=null?'*':''}</b>`:'<span class="dim">—</span>'}</td>
+      <td>${cumRtp!=null?`<b style="font-family:var(--mono);color:${rtpColor(cumRtp)}" title="cumulative RTP over decks 1–${k+1}: total money returned ÷ total wagered so far${kp?'':' (pool decks counted at the day average)'} · incl. mission bonuses: ${cumB.toFixed(2)}">${cumRtp.toFixed(2)}</b>`:'<span class="dim">—</span>'}</td>
+      <td>${rtpB!=null?`<b style="font-family:var(--mono);color:${rtpColor(rtpB)}" title="effective RTP incl. mission bonuses: game ${rtpEff.toFixed(2)} + ${margTok.toFixed(1)} expected tokens on this deck × $${tokVal.toFixed(3)}/token ÷ $${stake} stake${tokVal>0?'':' — add chests to give tokens a $ value'}">${rtpB.toFixed(2)}</b>`:'<span class="dim">—</span>'}</td>
+      ${cells}
+      <td title="tokens collected on the typical path · sim expectation: ~${expTok.toFixed(1)}"
+        style="font-family:var(--mono)"><b style="color:var(--gold)">${typTok}</b></td>
+      <td><span class="pb ${pcls(sim.allByMatch[k])}">${ptx(sim.allByMatch[k])}</span></td></tr>`
+      +(open?inspectorHTML(day,di,k,nCols):'');}).join('');
+  return `<div class="plan"><div class="cap">Deck plan · typical path — ${slots} visible slots · queued missions start counting only when they enter · click a deck row to inspect it</div>
+    <table><thead><tr><th>#</th><th>Deck</th>
+    <th title="fun score 0-100: near-even win feel + surprise events + agency · * = manual override">Fun</th>
+    <th title="return to player: money returned ÷ money wagered on this deck">RTP</th>
+    <th title="cumulative RTP over decks 1..k — total money returned ÷ total wagered so far (hover for the value incl. bonuses)">RTP Σ</th>
+    <th title="effective RTP after mission bonuses — game RTP + expected tokens earned on this deck × chest $/token ÷ stake $ (set stake in the top bar)">RTP+B</th>
+    ${ms.map((m,j)=>`<th>${j<slots?'':'⏳ '}${M29[MI[m.type]][1]} ×${m.target}${m.due?` <span style="color:var(--gold)">→d${m.due}</span>`:''}</th>`).join('')}
+    <th title="tokens collected so far on the typical path (hover for the sim expectation)">Tokens</th>
+    <th title="chance every mission is complete by the end of this deck">Day done</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+function render(){
+  const R=poolRates();
+  // day chips
+  document.getElementById('dayChips').innerHTML=ST.days.map((d,i)=>
+    `<button class="daychip ${i===ST.active?'on':''}" data-sel="${i}">Day ${i+1}
+     <span class="n">${(d.missions||[]).length}·${ptx(dayStats(d).all)}</span></button>`).join('')
+    ||'<span class="dim" style="font-size:12px">no days — add one</span>';
+  // bank
+  const CATS=['Opening','21+3','Four cards','Gameplay','Dealer'];
+  const act=ST.days[ST.active];
+  document.getElementById('bank').innerHTML=CATS.map(cat=>
+    `<div class="cat"><h3>${cat}</h3>`+
+    M29.map((m,i)=>({m,i})).filter(x=>x.m[2]===cat).map(({m,i})=>{
+      const used=act?(act.missions||[]).filter(x=>x.type===m[0]).length:0;
+      const med=medMatches(R[i],1);
+      const dead=R[i]<=0;
+      return `<div class="mcard" data-add="${m[0]}" style="${dead?'opacity:.45':''}"
+        title="${m[0]}${dead?' — IMPOSSIBLE in the shipped client: suits are painted by deck position, so cards dealt together never share a suit':' — click to add to Day '+(ST.active+1)}">
+        ${dead?`<span class="used" style="background:var(--lose);color:#fff">impossible</span>`
+          :used?`<span class="used">✓</span>`:''}
+        <div class="nm">${m[1]}</div>
+        <div class="st">${dead?'<b style="color:var(--lose)">0</b>/match in shipped client'
+          :`<b>${R[i]>=0.01?R[i].toFixed(2):R[i].toFixed(3)}</b>/match ·
+          1× ≈ <b>${med==null?'∞':med}</b> match${med===1?'':'es'}`}</div>
+      </div>`;}).join('')+'</div>').join('');
+  // days
+  document.getElementById('days').innerHTML=ST.days.map((day,di)=>{
+    const s=dayStats(day);
+    const slots=Math.max(1,ST.slots||3);
+    const tlDay=(day.decks||[]).length&&(day.missions||[]).length?timelineForDay(day,'per'):null;
+    const rows=s.per.map((x,j)=>{
+      const K=day.deckCount||3;
+      const dr=dayRate(day,MI[x.m.type]);
+      const pool=poolRates()[MI[x.m.type]];
+      const tip=dr!=null
+        ?`on this day's decks: ${(dr/K).toFixed(2)}/match · pool average: ${pool.toFixed(2)}/match — refit if the decks weren't chosen for this mission`
+        :`pool average: ${pool.toFixed(2)}/match (no decks fitted yet)`;
+      const med=x.med;
+      const tpe=med==null?null:x.m.tokens/med;
+      const slot=j<slots
+        ?`<span class="tag open" title="open from the first match">open</span>`
+        :`<span class="tag q" title="queued — enters only when a mission above completes, and starts counting from that moment">Q${j-slots+1}</span>`;
+      return `<tr>
+        <td>${slot} ${M29[MI[x.m.type]][1]}</td>
+        <td><input type="number" min="1" value="${x.m.target}" data-t="${di}:${j}"></td>
+        <td><input type="number" min="1" value="${x.m.tokens}" data-k="${di}:${j}"></td>
+        <td><input type="number" min="1" max="${Math.max(day.matches||0,day.deckCount||3)}" value="${x.m.due||''}" placeholder="—" data-due="${di}:${j}" title="deck on which this mission should COMPLETE — Fit decks will pace the day so it lands there (empty = as soon as possible)">${(()=>{
+          if(!x.m.due)return '';
+          const rb=rateBounds(x.m.type);
+          const serveDeck=tlDay&&tlDay.ms[j].serve!=null?Math.floor(tlDay.ms[j].serve)+1:(j<slots?1:null);
+          if(rb.top<=0||serveDeck==null)return '';
+          const need=Math.ceil(x.m.target/rb.top);
+          const earliest=serveDeck+need-1;
+          if(earliest>x.m.due)
+            return ` <span style="color:var(--lose);cursor:help" title="UNREACHABLE by d${x.m.due}: even the richest decks in the database give ~${rb.top.toFixed(2)}/match for this mission. From its typical entry (~d${serveDeck}) it needs ~${need} decks → earliest possible ≈ d${earliest}. Raise the due, lower the target, or move it earlier in the queue.">⚠ ≥d${earliest}</span>`;
+          if(rb.bottom>0.05){
+            const latest=serveDeck+Math.ceil(x.m.target/rb.bottom)-1;
+            if(latest<x.m.due)
+              return ` <span style="color:var(--gold);cursor:help" title="WILL FINISH EARLY: every deck feeds this mission (even the poorest give ~${rb.bottom.toFixed(2)}/match), so from its entry (~d${serveDeck}) it can't be stretched past ≈ d${latest}. Lower the due, raise the target, or queue it later so it enters later.">⚠ ≤d${latest}</span>`;
+          }
+          if(tlDay&&tlDay.ms[j].done!=null){
+            const dd=Math.ceil(tlDay.ms[j].done);
+            if(dd!==x.m.due)
+              return ` <span style="color:var(--gold);cursor:help" title="feasible on its own, but the fitted plan lands it on d${dd} — other due missions compete for the same decks and slots. Try spacing the dues apart, changing the queue order, or relaxing another mission's due.">→d${dd}</span>`;
+          }
+          return '';
+        })()}</td>
+        <td class="dim" title="median match on which it completes, INCLUDING time waiting in the queue · ${tip}">${med==null?'—':'~'+med+'m'}${
+          dr!=null&&dr/K<pool*0.6?' <span style="color:var(--lose)">▼</span>':''}</td>
+        <td class="dim" title="tokens per match of effort — ${x.m.tokens} tokens ÷ ~${med==null?'∞':med} matches (queue wait included). Higher = generous, lower = grindy.">${
+          tpe==null?'—':`<b style="color:${tpe>=5?'var(--win)':tpe>=2?'var(--gold)':'var(--lose)'}">${tpe.toFixed(1)}</b>`}</td>
+        <td><span class="pb ${pcls(x.p)}">${ptx(x.p)}</span></td>
+        <td style="white-space:nowrap"><button class="x" data-up="${di}:${j}" title="earlier in the queue">↑</button><button class="x" data-dn="${di}:${j}" title="later in the queue">↓</button><button class="x" data-rm="${di}:${j}">✕</button></td></tr>`;}).join('');
+    return `<div class="day ${di===ST.active?'active':''}">
+      <div class="dhead">
+        <span class="dtag">DAY ${di+1}</span>
+        <span class="lbl" title="the day is designed to be completed within this many decks">finish in</span><input type="number" min="1" max="40" value="${day.deckCount||3}" data-dc="${di}"><span class="lbl">decks</span>
+        <span class="lbl" title="how many matches the player actually plays this day — matches beyond the fitted decks run on this day's average deck">matches</span><input type="number" min="1" max="60" value="${day.matches||day.deckCount||3}" data-mc="${di}">
+        <span class="lbl" title="fit only decks whose fun score (0-100) falls in this range — blank = any. If too few decks qualify, the nearest ones are used">fun</span><input type="number" min="0" max="100" value="${day.funMin??''}" placeholder="min" data-fmin="${di}" style="width:48px">
+        <span class="lbl" style="margin:0 -4px">–</span><input type="number" min="0" max="100" value="${day.funMax??''}" placeholder="max" data-fmax="${di}" style="width:48px">
+        <span class="lbl" title="fit only decks whose RTP (money returned ÷ wagered) falls in this range — blank = any. If too few decks qualify, the nearest ones are used. e.g. 0.85–1.00 keeps the day house-safe">rtp</span><input type="number" min="0" max="3" step="0.01" value="${day.rtpMin??''}" placeholder="min" data-rmin="${di}" style="width:54px">
+        <span class="lbl" style="margin:0 -4px">–</span><input type="number" min="0" max="3" step="0.01" value="${day.rtpMax??''}" placeholder="max" data-rmax="${di}" style="width:54px">
+        <span class="lbl">all missions</span><span class="pb ${pcls(s.all)}">${ptx(s.all)}</span>
+        ${(day.decks||[]).length&&day.fitSig!==daySig(day)
+          ?`<button class="pb pr" style="border:none;cursor:pointer" data-refit="${di}"
+             title="Missions or targets changed after the decks were fitted — the decks aren't optimised for the current list. Click to refit.">decks stale — refit</button>`
+          :(day.decks||[]).length?'':`<button data-refit="${di}">Fit decks</button>`}
+        <span class="lbl">tokens</span><span style="font-family:var(--mono);font-size:12px"
+          title="expected tokens / max tokens · per deck = expected ÷ ${day.deckCount||3} decks">
+          <b style="color:var(--gold)">${s.tokExp.toFixed(0)}</b> / ${s.tokMax}
+          <span class="dim">· ${(s.tokExp/(day.deckCount||3)).toFixed(1)}/deck</span></span>
+        ${(()=>{const rs=(day.decks||[]).map(x=>BYID.get(String(x))).filter(Boolean).map(x=>rtpOf(x));
+          if(!rs.length)return '';
+          const avg=rs.reduce((a,b)=>a+b,0)/rs.length;
+          const avgB=avg+s.tokExp*chestTokenValue()/((day.deckCount||3)*(ST.stake||1));
+          return `<span class="lbl">rtp</span><b style="font-family:var(--mono);font-size:12px;color:${rtpColor(avg)}"
+            title="average return to player across the fitted decks — money returned ÷ money wagered">${avg.toFixed(2)}</b>
+          <span class="lbl" style="margin-left:2px" title="effective RTP after mission bonuses — game RTP + expected day tokens × chest $/token ÷ (decks × stake $)">+b</span><b style="font-family:var(--mono);font-size:12px;color:${rtpColor(avgB)}">${avgB.toFixed(2)}</b>`;})()}
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button data-fit="${di}">Fit decks</button>
+          <button data-play="${di}" title="open this day's decks as a Deck Room journey">Play ↗</button>
+          <button class="x" data-deld="${di}" title="remove day">✕</button>
+        </span>
+      </div>
+      ${rows?`<table><thead><tr><th>Mission</th><th>Target</th><th>Tokens</th>
+        <th title="deck on which the mission should complete — Fit decks paces the day accordingly (empty = ASAP)">Due deck</th>
+        <th title="median matches to complete at this target">~Matches</th>
+        <th title="tokens ÷ ~matches — reward per match of effort">Tok/Effort</th><th>P</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>`
+        :`<div class="dim" style="font-size:12px;padding:4px 0">empty — click missions in the bank</div>`}
+      ${deckPlanHTML(day,di)}
+    </div>`;}).join('')
+    +`<button class="adddaybig" data-addday title="add another day to the plan">+ Add day</button>`;
+  renderChests();
+  renderEffort();
+  renderCurves();
+  save();
+}
+function tokensByMatchArr(stats){          // cumulative EXPECTED tokens after each global match
+  const out=[];let base=0;
+  ST.days.forEach((d,i)=>{
+    const ms=d.missions||[],sim=stats[i].sim;
+    if(!ms.length||!sim)return;
+    for(let k=0;k<sim.H;k++)
+      out.push(base+ms.reduce((a,m,j)=>a+m.tokens*sim.doneByMatch[j][k],0));
+    base+=stats[i].tokExp;
+  });
+  return out;
+}
+function renderChests(){
+  const stats=ST.days.map(d=>dayStats(d));
+  const cum=[];let a=0,mx=0;const cumMax=[];
+  stats.forEach(s=>{a+=s.tokExp;mx+=s.tokMax;cum.push(a);cumMax.push(mx);});
+  const byMatch=tokensByMatchArr(stats);
+  for(const c of ST.chests){               // day/match-anchored chests: tokens follow the plan
+    if(c.by==='day'&&cum.length)
+      c.tokens=Math.max(1,Math.floor(cum[Math.min(Math.max(1,c.at||1),cum.length)-1]));
+    else if(c.by==='match'&&byMatch.length)
+      c.tokens=Math.max(1,Math.floor(byMatch[Math.min(Math.max(1,c.at||1),byMatch.length)-1]));
+  }
+  const chests=[...ST.chests].sort((x,y)=>x.tokens-y.tokens);
+  for(let i=1;i<chests.length;i++)          // keep auto thresholds strictly increasing (rule: 2–5 ascending)
+    if(chests[i].tokens<=chests[i-1].tokens&&(chests[i].by==='day'||chests[i].by==='match'))
+      chests[i].tokens=chests[i-1].tokens+1;
+  // the bar IS the chest requirement: it ends exactly at the last chest.
+  // Anything collected beyond it just clamps at 100%.
+  const scale=chests.length?chests[chests.length-1].tokens:Math.max(a,1);
+  const pct=v=>Math.max(0,Math.min(100,100*v/scale));
+  document.getElementById('tokInfo').textContent=ST.days.length
+    ?`expected ${Math.round(a)} · max ${mx} tokens over ${ST.days.length} days`:'add days first';
+  document.getElementById('chestBar').innerHTML=`<div class="metabar">
+    <div class="track"><div class="fmax" style="width:${pct(mx)}%"></div>
+      <div class="fexp" style="width:${pct(a)}%"></div></div>
+    ${chests.map(c=>{const x=pct(c.tokens),sh=x>92?'-88%':x<8?'-12%':'-50%';
+      return `<div class="cmk ${a>=c.tokens?'hit':''}"
+        style="left:calc(26px + (100% - 52px) * ${x/100});transform:translateX(${sh})">
+        <i>${a>=c.tokens?'🎁':'🔒'}</i><b>${c.tokens}t</b>$${(+c.cash).toFixed(2)}</div>`;}).join('')}
+    ${cum.map((v,i)=>`<div class="dmk" style="left:calc(26px + (100% - 52px) * ${pct(v)/100})">d${i+1}</div>`).join('')}
+  </div>`;
+  const firstDay=t=>{const k=cum.findIndex(v=>v>=t);return k<0?null:k+1;};
+  document.querySelector('#chestTbl tbody').innerHTML=chests.map((c,i)=>{
+    const de=firstDay(c.tokens);
+    const by=c.by||'tok',auto=by!=='tok';
+    const atMax=by==='day'?Math.max(1,cum.length):Math.max(1,byMatch.length);
+    return `<tr><td>${i+1}</td>
+      <td style="white-space:nowrap"><select data-cb="${i}">
+          <option value="tok"${by==='tok'?' selected':''}>tokens</option>
+          <option value="day"${by==='day'?' selected':''}>end of day</option>
+          <option value="match"${by==='match'?' selected':''}>match #</option>
+        </select>${auto?` <input type="number" min="1" max="${atMax}" value="${Math.min(c.at||1,atMax)}" data-ca="${i}" style="width:56px">`:''}</td>
+      <td><input type="number" min="1" value="${c.tokens}" data-ct="${i}"${auto?' disabled title="derived automatically — expected tokens collected by that point"':''}></td>
+      <td><input type="number" min="0" step="0.05" value="${(+c.cash).toFixed(2)}" data-cc="${i}"></td>
+      <td class="${de?'ok':''}" style="font-family:var(--mono)">${de?'day '+de:'—'}</td>
+      <td><button class="x" data-crm="${i}">✕</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="6" class="dim" style="text-align:left">no chests — add 2–5</td></tr>';
+}
+function renderEffort(){
+  const elD=document.getElementById('effDays'),elC=document.getElementById('effChests');
+  const elN=document.getElementById('effDone');
+  if(!ST.days.length){
+    elD.innerHTML=elC.innerHTML=elN.innerHTML='<div class="dim" style="font-size:12px">add days first</div>';return;}
+  const stats=ST.days.map(d=>dayStats(d));
+  { // matches vs expected missions completed — one line per day
+    const COLS=['#C9A55C','#5BB98A','#7FB3D5','#C77B1D','#B08BC9'];
+    const series=ST.days.map((d,i)=>{
+      const s=stats[i];if(!s.sim)return null;
+      return {name:'d'+(i+1)+' ('+s.per.length+' missions)',color:COLS[i%COLS.length],
+        pts:Array.from({length:s.sim.H},(_,k)=>
+          s.per.reduce((a,_,j)=>a+s.sim.doneByMatch[j][k],0))};
+    }).filter(Boolean);
+    if(!series.length)elN.innerHTML='<div class="dim" style="font-size:12px">add missions first</div>';
+    else{
+      const maxX=Math.max(...series.map(s=>s.pts.length),1);
+      const maxY=Math.max(...ST.days.map(d=>(d.missions||[]).length),1);
+      const w=460,h=190,pl=30,pr=10,pt=12,pb=24;
+      const X=n=>pl+((n-1)/Math.max(1,maxX-1))*(w-pl-pr);
+      const Y=v=>pt+(1-v/maxY)*(h-pt-pb);
+      let g='';
+      for(let v=0;v<=maxY;v++)g+=`<line x1="${pl}" x2="${w-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#22302B"/>
+        <text x="${pl-6}" y="${Y(v)+3}" text-anchor="end" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">${v}</text>`;
+      for(let n=1;n<=maxX;n++)g+=`<text x="${X(n)}" y="${h-8}" text-anchor="middle" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">${n}</text>`;
+      g+=series.map(s=>`<path d="${s.pts.map((v,i)=>(i?'L':'M')+X(i+1).toFixed(1)+' '+Y(v).toFixed(1)).join(' ')}"
+        fill="none" stroke="${s.color}" stroke-width="2"/>
+        <circle cx="${X(s.pts.length)}" cy="${Y(s.pts[s.pts.length-1])}" r="3" fill="${s.color}"/>`).join('');
+      elN.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="max-width:${w}px">${g}</svg>
+        <div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('')}
+        <span style="margin-left:auto">y = expected missions done · x = matches</span></div>`;
+    }
+  }
+  { // per day: allotted matches (frame) vs typical matches to finish all missions (gold), expected missions done on top
+    const data=ST.days.map((d,i)=>{
+      const s=stats[i];
+      if(!s.sim)return {H:d.matches||d.deckCount||3,need:null,doneExp:0,n:0};
+      const tl=timelineForDay(d,'per');
+      const allDone=tl.ms.length&&tl.ms.every(m=>m.done!=null);
+      return {H:s.sim.H,
+        need:allDone?Math.max(...tl.ms.map(m=>m.done)):null,
+        doneExp:s.per.reduce((a,x)=>a+x.p,0),n:s.per.length};});
+    const maxH=Math.max(...data.map(x=>x.H),1);
+    const bw=36,gap=24,pl=34,w=pl+data.length*(bw+gap)+12,h=190,pt=30,pb=22;
+    const Y=v=>pt+(1-v/maxH)*(h-pt-pb);
+    let g='';
+    [0,Math.round(maxH/2),maxH].forEach(v=>{
+      g+=`<line x1="${pl-4}" x2="${w-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="#22302B"/>
+      <text x="${pl-8}" y="${Y(v)+3}" text-anchor="end" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">${v}</text>`;});
+    data.forEach((x,i)=>{
+      const X=pl+i*(bw+gap);
+      g+=`<rect x="${X}" y="${Y(x.H)}" width="${bw}" height="${Math.max(1,h-pb-Y(x.H))}" fill="#1A2320" stroke="#2E4038" rx="4"/>`;
+      if(x.need!=null)
+        g+=`<rect x="${X+4}" y="${Y(x.need)}" width="${bw-8}" height="${Math.max(1,h-pb-Y(x.need))}" fill="#C9A55C" opacity=".9" rx="3"/>
+        <text x="${X+bw/2}" y="${Y(x.need)-4}" text-anchor="middle" font-size="9.5" fill="#C9A55C" font-family="IBM Plex Mono">${x.need.toFixed(1)}m</text>`;
+      else if(x.n)
+        g+=`<rect x="${X+4}" y="${Y(x.H)}" width="${bw-8}" height="${Math.max(1,h-pb-Y(x.H))}" fill="#C75950" opacity=".5" rx="3"/>
+        <text x="${X+bw/2}" y="${Y(x.H)-4}" text-anchor="middle" font-size="9.5" fill="#C75950" font-family="IBM Plex Mono">&gt;${x.H}m</text>`;
+      if(x.n)g+=`<text x="${X+bw/2}" y="12" text-anchor="middle" font-size="9.5" fill="#E4E9E5" font-family="IBM Plex Mono">${x.doneExp.toFixed(1)}/${x.n}</text>`;
+      g+=`<text x="${X+bw/2}" y="${h-7}" text-anchor="middle" font-size="9.5" fill="#8B9A93" font-family="IBM Plex Mono">d${i+1}</text>`;});
+    elD.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="max-width:${w}px">${g}</svg>
+      <div class="legend"><span><i style="background:#1A2320;border:1px solid #2E4038"></i>matches allotted</span>
+      <span><i style="background:#C9A55C"></i>typical matches to finish all</span>
+      <span>top = expected missions done</span></div>`;
+  }
+  { // between chests: expected matches from one milestone to the next
+    const chests=[...ST.chests].sort((a,b)=>a.tokens-b.tokens);
+    if(!chests.length){elC.innerHTML='<div class="dim" style="font-size:12px">no chests — add 2–5</div>';return;}
+    const byMatch=tokensByMatchArr(stats);
+    let prev=0;
+    const segs=chests.map(c=>{
+      const idx=byMatch.findIndex(v=>v>=c.tokens);
+      const at=idx<0?null:idx+1;
+      const seg=at==null?null:at-prev;
+      if(at!=null)prev=at;
+      return {seg,at,tokens:c.tokens};});
+    const maxS=Math.max(...segs.map(s=>s.seg||0),1);
+    const bw=36,gap=24,pl=34,w=pl+segs.length*(bw+gap)+12,h=190,pt=30,pb=22;
+    const Y=v=>pt+(1-v/maxS)*(h-pt-pb);
+    let g='';
+    [0,Math.round(maxS/2),maxS].forEach(v=>{
+      g+=`<line x1="${pl-4}" x2="${w-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="#22302B"/>
+      <text x="${pl-8}" y="${Y(v)+3}" text-anchor="end" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">${v}</text>`;});
+    segs.forEach((s,i)=>{
+      const X=pl+i*(bw+gap);
+      if(s.seg!=null)
+        g+=`<rect x="${X}" y="${Y(s.seg)}" width="${bw}" height="${Math.max(1,h-pb-Y(s.seg))}" fill="#5BB98A" opacity=".85" rx="4"/>
+        <text x="${X+bw/2}" y="${Y(s.seg)-4}" text-anchor="middle" font-size="9.5" fill="#5BB98A" font-family="IBM Plex Mono">${s.seg}m</text>
+        <text x="${X+bw/2}" y="12" text-anchor="middle" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">@m${s.at}</text>`;
+      else
+        g+=`<rect x="${X}" y="${Y(maxS)}" width="${bw}" height="${Math.max(1,h-pb-Y(maxS))}" fill="#C75950" opacity=".4" rx="4"/>
+        <text x="${X+bw/2}" y="${Y(maxS)-4}" text-anchor="middle" font-size="9" fill="#C75950" font-family="IBM Plex Mono">unreached</text>`;
+      g+=`<text x="${X+bw/2}" y="${h-7}" text-anchor="middle" font-size="9.5" fill="#8B9A93" font-family="IBM Plex Mono">🎁${i+1}·${s.tokens}t</text>`;});
+    elC.innerHTML=`<svg viewBox="0 0 ${w} ${h}" style="max-width:${w}px">${g}</svg>
+      <div class="legend"><span><i style="background:#5BB98A"></i>expected matches since previous chest</span>
+      <span>@m = global match where it unlocks</span></div>`;
+  }
+}
+function renderCurves(){
+  const day=ST.days[ST.active];
+  const el=document.getElementById('curves');
+  if(!day||!(day.missions||[]).length){el.innerHTML='<div class="dim" style="font-size:12px">select a day with missions</div>';return;}
+  const K=Math.max((day.decks||[]).length||day.deckCount||3,day.matches||0);
+  const COLS=['#C9A55C','#5BB98A','#7FB3D5','#C77B1D','#B08BC9'];
+  const N=Math.max(12,K),w=640,h=210,pl=42,pr=10,pt=10,pb=24;
+  const X=n=>pl+((n-1)/(N-1))*(w-pl-pr);
+  const Y=p=>pt+(1-p)*(h-pt-pb);
+  const sim=simDay(day,N);                 // slot-aware: P(done by match n) incl. queue wait
+  const series=day.missions.map((m,j)=>({
+    name:M29[MI[m.type]][1]+' ×'+m.target,color:COLS[j%COLS.length],
+    pts:sim.doneByMatch[j].slice(0,N)}));
+  const grid=[0,0.5,1].map(p=>`<line x1="${pl}" x2="${w-pr}" y1="${Y(p)}" y2="${Y(p)}" stroke="#22302B"/>
+    <text x="${pl-6}" y="${Y(p)+3}" text-anchor="end" font-size="10" fill="#8B9A93" font-family="IBM Plex Mono">${p*100}%</text>`).join('');
+  const dayLine=`<line x1="${X(K)}" x2="${X(K)}" y1="${pt}" y2="${h-pb}" stroke="#98A6A0" stroke-dasharray="4 4" opacity=".5"/>
+    <text x="${X(K)}" y="${pt+9}" text-anchor="middle" font-size="9" fill="#98A6A0" font-family="IBM Plex Mono">day = ${K} matches</text>`;
+  const xl=Array.from({length:N},(_,i)=>`<text x="${X(i+1)}" y="${h-8}" text-anchor="middle" font-size="9.5" fill="#8B9A93" font-family="IBM Plex Mono">${i+1}</text>`).join('');
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${grid}${dayLine}${xl}
+    ${series.map(s=>`<path d="${s.pts.map((p,i)=>(i?'L':'M')+X(i+1).toFixed(1)+' '+Y(p).toFixed(1)).join(' ')}"
+      fill="none" stroke="${s.color}" stroke-width="2"/>`).join('')}</svg>
+    <div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('')}
+    <span style="margin-left:auto">x = matches played</span></div>`;
+}
+
+/* ═══════════════ export: personal scripted bundle ═══════════════ */
+function sha1hex(str){ // compact sync SHA-1 (ASCII), matches python hashlib.sha1
+  const rl=(n,b)=>(n<<b)|(n>>>(32-b));
+  const bytes=[...str].map(c=>c.charCodeAt(0));
+  const ml=bytes.length*8;
+  bytes.push(0x80);
+  while(bytes.length%64!==56)bytes.push(0);
+  for(let i=7;i>=0;i--)bytes.push((ml/Math.pow(2,i*8))&0xff);
+  let h0=0x67452301,h1=0xEFCDAB89,h2=0x98BADCFE,h3=0x10325476,h4=0xC3D2E1F0;
+  for(let b=0;b<bytes.length;b+=64){
+    const w=new Array(80);
+    for(let i=0;i<16;i++)w[i]=(bytes[b+i*4]<<24)|(bytes[b+i*4+1]<<16)|(bytes[b+i*4+2]<<8)|bytes[b+i*4+3];
+    for(let i=16;i<80;i++)w[i]=rl(w[i-3]^w[i-8]^w[i-14]^w[i-16],1);
+    let a=h0,e0=h1,c=h2,d=h3,e=h4;
+    for(let i=0;i<80;i++){
+      let f,k;
+      if(i<20){f=(e0&c)|(~e0&d);k=0x5A827999;}
+      else if(i<40){f=e0^c^d;k=0x6ED9EBA1;}
+      else if(i<60){f=(e0&c)|(e0&d)|(c&d);k=0x8F1BBCDC;}
+      else{f=e0^c^d;k=0xCA62C1D6;}
+      const t=(rl(a,5)+f+e+k+w[i])|0;
+      e=d;d=c;c=rl(e0,30);e0=a;a=t;
+    }
+    h0=(h0+a)|0;h1=(h1+e0)|0;h2=(h2+c)|0;h3=(h3+d)|0;h4=(h4+e)|0;
+  }
+  return [h0,h1,h2,h3,h4].map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+const compId=missions=>sha1hex(missions.map(m=>m.type).join('|')).slice(0,8);
+function exportBundle(){
+  const err=document.getElementById('err');err.textContent='';
+  if(!ST.days.length){err.textContent='Add days first.';return;}
+  const caps=ST.days.map(d=>(d.missions||[]).length);
+  const cap=caps[0];
+  if(!cap){err.textContent='Day 1 has no missions.';return;}
+  if(caps.some(c=>c!==cap)){err.textContent=
+    `Every day needs the same mission count (dailyCap) — got [${caps.join(', ')}]. Even them out.`;return;}
+  if(!(ST.chests.length>=2&&ST.chests.length<=5)){err.textContent=
+    `Progression needs 2–5 chests (rule 11) — you have ${ST.chests.length}.`;return;}
+  const D=ST.days.length;
+  const chains={},rotation=[];
+  for(const day of ST.days){
+    const ms=day.missions.map((m,i)=>({index:i+1,type:m.type,target:m.target,
+      reward:{mission_token:m.tokens}}));
+    const comp=compId(ms);
+    const uid='chn.'+comp;
+    ms.forEach(m=>{m.missionUid=`msn.${comp}.${m.type}`;
+      // stable key order: missionUid first
+      const o={missionUid:m.missionUid,index:m.index,type:m.type,target:m.target,reward:m.reward};
+      Object.keys(m).forEach(k=>delete m[k]);Object.assign(m,o);});
+    if(!chains[uid])chains[uid]={chainUid:uid,label:'Day '+(rotation.length+1),missions:ms};
+    rotation.push(uid);
+  }
+  const slug='studio';
+  const tiers=[...ST.chests].sort((a,b)=>a.tokens-b.tokens).map((c,i)=>({
+    tierUid:`tier.${slug}.${i+1}`,tokensRequired:c.tokens,reward:{bonusCash:+(+c.cash).toFixed(2)}}));
+  for(let i=1;i<tiers.length;i++)if(tiers[i].tokensRequired<=tiers[i-1].tokensRequired){
+    err.textContent='Chest token thresholds must be strictly increasing.';return;}
+  const today=new Date();
+  const ymd=today.getFullYear()+String(today.getMonth()+1).padStart(2,'0')+String(today.getDate()).padStart(2,'0');
+  const bundle={version:4,
+    bundleUid:`bnd.personal.${ymd}.01`,
+    bundleType:'personal',
+    segments:[{segmentUid:'seg_all',label:'All players',priority:1,
+      configUid:`cfg.personal.${slug}`,condition:'matches_total >= 1'}],
+    configs:{[`cfg.personal.${slug}`]:{
+      configUid:`cfg.personal.${slug}`,configType:'scripted',
+      timing:{personal:{durationDays:D,dailyWindowHours:24}},
+      dailyMissions:{visibleSlots:Math.min(Math.max(1,ST.slots||3),cap),dailyCap:cap},
+      rotation,chains,
+      progression:{numberOfDays:D,tiers}}}};
+  const blob=new Blob([JSON.stringify(bundle,null,2)+'\n'],{type:'application/json'});
+  const aEl=document.createElement('a');
+  aEl.href=URL.createObjectURL(blob);
+  aEl.download=`bundle_${ymd}_studio.json`;
+  aEl.click();URL.revokeObjectURL(aEl.href);
+  err.innerHTML=`<span class="ok">Bundle exported — verify with:</span> python3 validate_bundle.py --uids ${aEl.download}`;
+}
+
+function exportPlanJSON(){                 // the full Studio configuration, machine-readable
+  const plan={
+    format:'mission-studio-plan',
+    version:1,
+    exportedAt:new Date().toISOString(),
+    suitModel:SUIT_MODEL,
+    slots:ST.slots||3,
+    stake:ST.stake||1,
+    days:ST.days.map((d,i)=>({
+      day:i+1,
+      finishInDecks:d.deckCount||3,
+      matches:d.matches||d.deckCount||3,
+      funRange:(d.funMin!=null||d.funMax!=null)?{min:d.funMin??null,max:d.funMax??null}:null,
+      rtpRange:(d.rtpMin!=null||d.rtpMax!=null)?{min:d.rtpMin??null,max:d.rtpMax??null}:null,
+      missions:(d.missions||[]).map((m,j)=>({order:j+1,type:m.type,target:m.target,
+        tokens:m.tokens,dueDeck:m.due??null})),
+      decks:(d.decks||[]).map(String)})),
+    chests:[...ST.chests].sort((a,b)=>a.tokens-b.tokens).map((c,i)=>({n:i+1,
+      tokens:c.tokens,bonusCash:+c.cash,
+      anchor:c.by?{by:c.by,at:c.at}:null})),
+    funOverrides:ST.funOverrides||{},
+    rtpOverrides:ST.rtpOverrides||{}};
+  const blob=new Blob([JSON.stringify(plan,null,2)+'\n'],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mission_studio_plan.json';
+  a.click();URL.revokeObjectURL(a.href);
+  document.getElementById('err').innerHTML='<span class="ok">Plan configuration exported as JSON.</span>';
+}
+
+/* ═══════════════ wiring ═══════════════ */
+function newDay(){return {missions:[],deckCount:+document.getElementById('decksPerDay').value||3,decks:[]};}
+const slotsEl=document.getElementById('slotsN');
+slotsEl.value=ST.slots||3;
+slotsEl.onchange=()=>{ST.slots=Math.max(1,Math.min(5,+slotsEl.value||3));slotsEl.value=ST.slots;render();};
+const stakeEl=document.getElementById('stakeN');
+stakeEl.value=ST.stake||1;
+stakeEl.onchange=()=>{ST.stake=Math.max(0.05,+stakeEl.value||1);stakeEl.value=ST.stake;render();};
+document.getElementById('addDay').onclick=()=>{ST.days.push(newDay());ST.active=ST.days.length-1;render();};
+document.getElementById('addDay3').onclick=()=>{for(let i=0;i<3;i++)ST.days.push(newDay());
+  ST.active=ST.days.length-1;render();};
+document.getElementById('clearAll').onclick=()=>{
+  if(ST.days.length&&!confirm('Clear all days and chests?'))return;
+  ST={days:[],chests:[],active:0};render();};
+document.getElementById('fitAll').onclick=()=>{
+  const used=new Set();
+  ST.days.forEach(d=>{fitDay(d,used);(d.decks||[]).forEach(id=>used.add(String(id)));});
+  render();};
+document.getElementById('exportBtn').onclick=exportBundle;
+document.getElementById('exportJson').onclick=exportPlanJSON;
+document.getElementById('dayChips').addEventListener('click',e=>{
+  const b=e.target.closest('[data-sel]');if(b){ST.active=+b.dataset.sel;render();}});
+document.getElementById('bank').addEventListener('click',e=>{
+  const c=e.target.closest('[data-add]');if(!c)return;
+  const err=document.getElementById('err');err.textContent='';
+  if(!ST.days.length){ST.days.push(newDay());ST.active=0;}
+  const day=ST.days[ST.active];
+  if((day.missions||[]).length>=5){err.textContent='A day holds at most 5 missions (dailyCap).';return;}
+  if(day.missions.some(m=>m.type===c.dataset.add)){err.textContent='That mission is already in this day (no duplicate types per chain).';return;}
+  const rate=poolRates()[MI[c.dataset.add]];
+  if(rate<=0){err.textContent='Impossible in the shipped client — suits are painted by position (Card.swift), cards dealt together never share a suit. Only useful for testing the uncompleted-and-covered path.';return;}
+  day.missions.push({type:c.dataset.add,target:Math.max(1,Math.round(rate*(day.deckCount||3)*0.75)),
+    tokens:tokDefault(rate)});
+  render();});
+document.getElementById('days').addEventListener('click',e=>{
+  const b=e.target.closest('button');
+  if(!b){
+    if(e.target.closest('input,select,a'))return;
+    const row=e.target.closest('[data-insp]');
+    if(row){INSP=INSP===row.dataset.insp?null:row.dataset.insp;SWAPMSG=null;render();}
+    return;
+  }
+  const d=b.dataset;
+  if(d.play1!=null){
+    const payload={ids:[d.play1],model:'book',mFrom:1,mTo:null,mRuns:100};
+    const enc=btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    window.open('index.html#j='+enc,'_blank');return;
+  }
+  if(d.swap!=null){
+    if(b.disabled)return;
+    b.disabled=true;b.textContent='Searching…';   // paint feedback BEFORE the heavy search
+    const [di,k]=d.swap.split(':').map(Number);
+    setTimeout(()=>{
+      const day=ST.days[di],ms=day.missions||[];
+      const slots=Math.max(1,ST.slots||3);
+      const used=new Set(ST.days.filter(x=>x!==day).flatMap(x=>x.decks||[]).map(String));
+      const pen=constraintPenFn(day),penOf=new Map();
+      const penFor=id=>{if(!pen)return 0;
+        if(!penOf.has(id))penOf.set(id,pen(BYID.get(id))||0);
+        return penOf.get(id);};
+      const tot=list=>planLoss(ms,list,slots)+list.reduce((a,id)=>a+penFor(id),0);
+      const cur=String(day.decks[k]);
+      let bestId=cur,bestL=tot(day.decks.map(String));
+      for(const cd of fitCandidates(day)){
+        const id=String(cd.deck_id);
+        if(id===cur||used.has(id)||day.decks.map(String).includes(id))continue;
+        const trial=day.decks.map(String);trial[k]=id;
+        const L=tot(trial);
+        if(L<bestL-1e-9){bestL=L;bestId=id;}
+      }
+      INSP=di+':'+k;
+      if(bestId===cur){
+        SWAPMSG={key:INSP,ok:false,
+          text:'No better deck found — this one is already the best available for position '+(k+1)+' under the current constraints (fun/RTP ranges, dues, decks used elsewhere).'};
+      }else{
+        day.decks[k]=bestId;day.fitSig=daySig(day);
+        SWAPMSG={key:INSP,ok:true,text:'Replaced '+cur+' → '+bestId+'. All numbers below are updated.'};
+      }
+      render();
+    },30);
+    return;
+  }
+  if(d.addday!=null){ST.days.push(newDay());ST.active=ST.days.length-1;render();return;}
+  if(d.refit!=null){const i=+d.refit;
+    fitDay(ST.days[i],new Set(ST.days.filter(x=>x!==ST.days[i])
+      .flatMap(x=>x.decks||[]).map(String)));render();return;}
+  if(d.up!=null){const[i,j]=d.up.split(':').map(Number);
+    if(j>0){const a=ST.days[i].missions;[a[j-1],a[j]]=[a[j],a[j-1]];}}
+  else if(d.dn!=null){const[i,j]=d.dn.split(':').map(Number);
+    const a=ST.days[i].missions;if(j<a.length-1)[a[j],a[j+1]]=[a[j+1],a[j]];}
+  else if(d.rm!=null){const[i,j]=d.rm.split(':').map(Number);ST.days[i].missions.splice(j,1);}
+  else if(d.deld!=null){ST.days.splice(+d.deld,1);ST.active=Math.max(0,Math.min(ST.active,ST.days.length-1));}
+  else if(d.fit!=null){ST.active=+d.fit;fitDay(ST.days[+d.fit]);}
+  else if(d.play!=null){
+    const day=ST.days[+d.play];
+    if(!(day.decks||[]).length){document.getElementById('err').textContent='Fit decks first.';return;}
+    const payload={ids:day.decks,model:'book',mFrom:1,mTo:null,mRuns:100};
+    const enc=btoa(JSON.stringify(payload)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    window.open('index.html#j='+enc,'_blank');return;
+  }
+  else return;
+  render();});
+document.getElementById('days').addEventListener('change',e=>{
+  const t=e.target,d=t.dataset;
+  if(d.t!=null){const[i,j]=d.t.split(':').map(Number);ST.days[i].missions[j].target=Math.max(1,+t.value||1);}
+  else if(d.due!=null){const[i,j]=d.due.split(':').map(Number);
+    const v=+t.value;ST.days[i].missions[j].due=v>0?v:undefined;}
+  else if(d.k!=null){const[i,j]=d.k.split(':').map(Number);ST.days[i].missions[j].tokens=Math.max(1,+t.value||1);}
+  else if(d.dc!=null){ST.days[+d.dc].deckCount=Math.max(1,+t.value||1);}
+  else if(d.mc!=null){ST.days[+d.mc].matches=Math.max(1,+t.value||1);}
+  else if(d.fmin!=null){const v=t.value===''?null:Math.max(0,Math.min(100,+t.value));
+    ST.days[+d.fmin].funMin=v==null?undefined:v;}
+  else if(d.fmax!=null){const v=t.value===''?null:Math.max(0,Math.min(100,+t.value));
+    ST.days[+d.fmax].funMax=v==null?undefined:v;}
+  else if(d.rmin!=null){const v=t.value===''?null:Math.max(0,Math.min(3,+t.value));
+    ST.days[+d.rmin].rtpMin=v==null?undefined:v;}
+  else if(d.rmax!=null){const v=t.value===''?null:Math.max(0,Math.min(3,+t.value));
+    ST.days[+d.rmax].rtpMax=v==null?undefined:v;}
+  else if(d.funov!=null){const v=t.value===''?null:Math.max(0,Math.min(100,+t.value));
+    ST.funOverrides=ST.funOverrides||{};
+    if(v==null)delete ST.funOverrides[d.funov];else ST.funOverrides[d.funov]=v;}
+  else if(d.rtpov!=null){const v=t.value===''?null:Math.max(0,Math.min(3,+t.value));
+    ST.rtpOverrides=ST.rtpOverrides||{};
+    if(v==null)delete ST.rtpOverrides[d.rtpov];else ST.rtpOverrides[d.rtpov]=v;}
+  else return;
+  render();});
+document.getElementById('chestAdd').onclick=()=>{
+  if(ST.chests.length>=5){document.getElementById('err').textContent='Max 5 chests (rule 11).';return;}
+  const last=ST.chests.length?Math.max(...ST.chests.map(c=>c.tokens)):0;
+  ST.chests.push({tokens:last+30,cash:1.00});render();};
+document.getElementById('chestAuto').onclick=()=>{
+  const raw=ST.days.reduce((a,d)=>a+dayStats(d).tokExp,0);
+  if(raw<3){document.getElementById('err').textContent='Add days with missions first.';return;}
+  ST.chests=[{tokens:Math.max(1,Math.floor(raw*0.33)),cash:0.50},
+    {tokens:Math.max(2,Math.floor(raw*0.66)),cash:1.50},
+    {tokens:Math.max(3,Math.floor(raw)),cash:3.00}];render();};
+document.getElementById('chestTbl').addEventListener('click',e=>{
+  const b=e.target.closest('[data-crm]');if(!b)return;
+  const sorted=[...ST.chests].sort((x,y)=>x.tokens-y.tokens);
+  ST.chests=ST.chests.filter(c=>c!==sorted[+b.dataset.crm]);render();});
+document.getElementById('chestTbl').addEventListener('change',e=>{
+  const t=e.target,sorted=[...ST.chests].sort((x,y)=>x.tokens-y.tokens);
+  if(t.dataset.ct!=null)sorted[+t.dataset.ct].tokens=Math.max(1,+t.value||1);
+  else if(t.dataset.cc!=null)sorted[+t.dataset.cc].cash=Math.max(0,+t.value||0);
+  else if(t.dataset.cb!=null){const c=sorted[+t.dataset.cb];
+    if(t.value==='tok'){delete c.by;delete c.at;}
+    else{c.by=t.value;c.at=c.at||1;}}
+  else if(t.dataset.ca!=null)sorted[+t.dataset.ca].at=Math.max(1,+t.value||1);
+  else return;render();});
+
+/* ═══════════════ daily schedule ═══════════════ */
+let SCHED_MODE='personal';
+// expected-progress timeline: 3 visible slots; a queued mission enters when one
+// completes; each mission's clock runs only while visible. Time unit = matches.
+function timelineForDay(day,mode,mpd){
+  const R=poolRates();
+  const K=mode==='cal'?mpd
+    :Math.max((day.decks||[]).length||day.deckCount||3,day.matches||0);
+  const dayAvg={};
+  const rateAt=(mi,m)=>{
+    if(mode==='cal')return R[mi];
+    const id=(day.decks||[])[m],d=id&&BYID.get(String(id));
+    if(d)return deckRates(d,30)[mi];
+    const ds=(day.decks||[]).map(x=>BYID.get(String(x))).filter(Boolean);
+    if(!ds.length)return R[mi];
+    if(dayAvg[mi]==null)dayAvg[mi]=ds.reduce((a,dd)=>a+deckRates(dd,30)[mi],0)/ds.length;
+    return dayAvg[mi];          // matches past the fitted decks: this day's average deck
+  };
+  const ms=(day.missions||[]).map((m,idx)=>({idx,type:m.type,target:m.target,
+    tokens:m.tokens,progress:0,serve:null,done:null}));
+  const queue=ms.map(x=>x.idx);const vis=[];
+  const serveNext=t=>{while(vis.length<Math.max(1,ST.slots||3)&&queue.length){
+    const i=queue.shift();ms[i].serve=t;vis.push(i);}};
+  let t=0;serveNext(0);
+  const snaps=[];                          // progress per mission at the end of each match
+  for(let m=0;m<K;m++){
+    let guard=0;
+    while(t<m+1&&vis.length&&guard++<100){
+      let best=null,bestT=Infinity;
+      for(const i of vis){
+        const r=rateAt(MI[ms[i].type],m);
+        if(r<=1e-9)continue;
+        const tc=t+(ms[i].target-ms[i].progress)/r;
+        if(tc<bestT){bestT=tc;best=i;}
+      }
+      if(best==null||bestT>m+1){
+        for(const i of vis)ms[i].progress+=rateAt(MI[ms[i].type],m)*(m+1-t);
+        t=m+1;break;
+      }
+      for(const i of vis)ms[i].progress+=rateAt(MI[ms[i].type],m)*(bestT-t);
+      t=bestT;ms[best].done=t;ms[best].progress=ms[best].target;
+      vis.splice(vis.indexOf(best),1);serveNext(t);
+    }
+    t=Math.max(t,m+1);
+    snaps.push(ms.map(x=>x.progress));
+  }
+  return {K,ms,snaps};
+}
+function ganttSVG(tl,day,mode){
+  const COLS=['#C9A55C','#5BB98A','#7FB3D5','#C77B1D','#B08BC9'];
+  const w=680,rowH=26,pt=22,pl=170,pr=14,h=pt+tl.ms.length*rowH+26;
+  const X=t=>pl+(t/tl.K)*(w-pl-pr);
+  let g='';
+  // deck boundaries + labels
+  for(let m=0;m<tl.K;m++){
+    g+=`<line x1="${X(m)}" x2="${X(m)}" y1="${pt-6}" y2="${h-20}" stroke="#22302B"/>`;
+    const lbl=mode==='cal'?('m'+(m+1))
+      :((day.decks||[])[m]?'…'+String(day.decks[m]).slice(-4):'pool');
+    g+=`<text x="${(X(m)+X(m+1))/2}" y="${pt-9}" text-anchor="middle" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">${lbl}</text>`;
+  }
+  g+=`<line x1="${X(tl.K)}" x2="${X(tl.K)}" y1="${pt-6}" y2="${h-20}" stroke="#2E4038"/>`;
+  tl.ms.forEach((m,r)=>{
+    const y=pt+r*rowH+6,c=COLS[r%COLS.length];
+    const nm=M29[MI[m.type]][1];
+    g+=`<text x="${pl-8}" y="${y+10}" text-anchor="end" font-size="10.5" fill="#E4E9E5" font-family="IBM Plex Mono">${nm} ×${m.target}</text>`;
+    if(m.serve==null){
+      g+=`<text x="${pl+4}" y="${y+10}" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">never served</text>`;return;}
+    const x0=X(m.serve),x1=X(m.done!=null?m.done:tl.K);
+    g+=`<path d="M${x0} ${y-3} l0 20" stroke="${c}" stroke-width="2"/>`;   // serve marker
+    g+=`<rect x="${x0}" y="${y}" width="${Math.max(2,x1-x0)}" height="13" rx="4" fill="${c}" opacity="${m.done!=null?'0.85':'0.35'}"/>`;
+    if(m.done!=null)
+      g+=`<text x="${Math.min(x1+5,w-pr-30)}" y="${y+10}" font-size="9" fill="${c}" font-family="IBM Plex Mono">✓ m${m.done.toFixed(1)}</text>`;
+    else
+      g+=`<rect x="${X(tl.K)-3}" y="${y}" width="3" height="13" fill="#C75950"/>
+          <text x="${X(tl.K)+5}" y="${y+10}" font-size="9" fill="#C75950" font-family="IBM Plex Mono">${(100*Math.min(1,m.progress/m.target)).toFixed(0)}%</text>`;
+  });
+  g+=`<text x="${pl}" y="${h-6}" font-size="9" fill="#8B9A93" font-family="IBM Plex Mono">match →</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}">${g}</svg>`;
+}
+function renderSchedule(){
+  const el=document.getElementById('schedDays');
+  const mode=SCHED_MODE==='calendric'?'cal':'per';
+  document.getElementById('calCtl').style.display=mode==='cal'?'inline-flex':'none';
+  const mpd=Math.max(1,+document.getElementById('calMpd').value||3);
+  const start=document.getElementById('calStart').value;
+  if(!ST.days.length){el.innerHTML='<div class="dim" style="font-size:12px">no days in the plan</div>';return;}
+  el.innerHTML=ST.days.map((day,i)=>{
+    const tl=timelineForDay(day,mode,mpd);
+    const doneN=tl.ms.filter(m=>m.done!=null).length;
+    let dateTxt='';
+    if(mode==='cal'&&start){
+      const d=new Date(start);d.setDate(d.getDate()+i);
+      dateTxt=d.toISOString().slice(0,10)+' · ';
+    }
+    // deck contribution table (personal only)
+    let contrib='';
+    if(mode==='per'&&(day.decks||[]).length){
+      const heads=day.missions.map(m=>`<th title="${m.type}">${M29[MI[m.type]][1].split(' ')[0]} ×${m.target}</th>`).join('');
+      const rows=day.decks.map((id,k)=>{
+        const d=BYID.get(String(id));const r=d?deckRates(d,30):null;
+        return `<tr><td>#${k+1} · ${id}</td>${day.missions.map(m=>
+          `<td>${r?r[MI[m.type]].toFixed(2):'—'}</td>`).join('')}</tr>`;}).join('');
+      const tot=`<tr><td class="dim">Σ expected / day</td>${day.missions.map(m=>{
+        const s=day.decks.reduce((a,id)=>{const d=BYID.get(String(id));
+          return a+(d?deckRates(d,30)[MI[m.type]]:0);},0);
+        return `<td><b style="color:${s>=m.target?'var(--win)':'var(--lose)'}">${s.toFixed(2)}</b></td>`;}).join('')}</tr>`;
+      contrib=`<table class="contrib" style="margin-top:10px;max-width:680px"><thead>
+        <tr><th>Deck (serve order)</th>${heads}</tr></thead><tbody>${rows}${tot}</tbody></table>`;
+    }
+    return `<div class="gday">
+      <div class="gtitle"><span class="dt">Day ${i+1}</span>
+        <span class="sub">${dateTxt}${mode==='cal'?mpd+' expected matches':'decks: '+(day.decks||[]).join(' · ')||'not fitted'}</span>
+        <span class="sub" style="margin-left:auto">${doneN}/${tl.ms.length} missions expected done</span></div>
+      ${ganttSVG(tl,day,mode)}${contrib}</div>`;
+  }).join('');
+}
+function exportCalendric(){
+  const err=document.getElementById('err');err.textContent='';
+  const caps=ST.days.map(d=>(d.missions||[]).length),cap=caps[0];
+  if(!cap||caps.some(c=>c!==cap)){err.textContent='Every day needs the same mission count.';return;}
+  if(!(ST.chests.length>=2&&ST.chests.length<=5)){err.textContent='Progression needs 2–5 chests.';return;}
+  const chains={},rotation=[];
+  for(const day of ST.days){
+    const ms=day.missions.map((m,i)=>({index:i+1,type:m.type,target:m.target,
+      reward:{mission_token:m.tokens}}));
+    const comp=compId(ms);const uid='chn.'+comp;
+    ms.forEach(m=>{const o={missionUid:`msn.${comp}.${m.type}`,index:m.index,type:m.type,
+      target:m.target,reward:m.reward};Object.keys(m).forEach(k=>delete m[k]);Object.assign(m,o);});
+    if(!chains[uid])chains[uid]={chainUid:uid,label:'Day '+(rotation.length+1),missions:ms};
+    rotation.push(uid);
+  }
+  const slug='studio_cal';
+  const tiers=[...ST.chests].sort((a,b)=>a.tokens-b.tokens).map((c,i)=>({
+    tierUid:`tier.${slug}.${i+1}`,tokensRequired:c.tokens,reward:{bonusCash:+(+c.cash).toFixed(2)}}));
+  const today=new Date();
+  const ymd=today.getFullYear()+String(today.getMonth()+1).padStart(2,'0')+String(today.getDate()).padStart(2,'0');
+  const bundle={version:4,bundleUid:`bnd.calendric.${ymd}.01`,bundleType:'calendric',
+    segments:[{segmentUid:'seg_all',label:'All players',priority:1,
+      configUid:`cfg.calendric.${slug}`,condition:'matches_total >= 1'}],
+    configs:{[`cfg.calendric.${slug}`]:{
+      configUid:`cfg.calendric.${slug}`,configType:'scripted',
+      prorationCalendricFirstExposure:{enabled:true,minReward:{bonusCash:0.10}},
+      dailyMissions:{visibleSlots:Math.min(Math.max(1,ST.slots||3),cap),dailyCap:cap},
+      rotation,chains,
+      progression:{numberOfDays:ST.days.length,tiers}}}};
+  const blob=new Blob([JSON.stringify(bundle,null,2)+'\n'],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`bundle_${ymd}_studio_cal.json`;a.click();URL.revokeObjectURL(a.href);
+  err.innerHTML='<span class="ok">Calendric bundle exported — dates/day-boundary are set in backoffice.</span>';
+}
+/* tabs + schedule wiring */
+function showTab(which){
+  document.getElementById('vStudio').style.display=which==='studio'?'':'none';
+  document.getElementById('vSched').style.display=which==='sched'?'':'none';
+  document.getElementById('tabStudio').classList.toggle('primary',which==='studio');
+  document.getElementById('tabSched').classList.toggle('primary',which==='sched');
+  if(which==='sched')renderSchedule();
+}
+document.getElementById('tabStudio').onclick=()=>showTab('studio');
+document.getElementById('tabSched').onclick=()=>showTab('sched');
+document.getElementById('mPersonal').onclick=()=>{SCHED_MODE='personal';
+  document.getElementById('mPersonal').classList.add('primary');
+  document.getElementById('mCalendric').classList.remove('primary');renderSchedule();};
+document.getElementById('mCalendric').onclick=()=>{SCHED_MODE='calendric';
+  document.getElementById('mCalendric').classList.add('primary');
+  document.getElementById('mPersonal').classList.remove('primary');renderSchedule();};
+document.getElementById('calMpd').addEventListener('change',renderSchedule);
+document.getElementById('calStart').addEventListener('change',renderSchedule);
+document.getElementById('exportCal').onclick=exportCalendric;
+function setSuitModel(m){
+  SUIT_MODEL=m;
+  try{localStorage.setItem('studio_suits',m);}catch(e){}
+  document.getElementById('suitClient').classList.toggle('primary',m==='client');
+  document.getElementById('suitRandom').classList.toggle('primary',m==='random');
+  render();
+  if(document.getElementById('vSched').style.display!=='none')renderSchedule();
+}
+document.getElementById('suitClient').onclick=()=>setSuitModel('client');
+document.getElementById('suitRandom').onclick=()=>setSuitModel('random');
+document.getElementById('suit'+(SUIT_MODEL==='client'?'Client':'Random')).classList.add('primary');
+(()=>{const d=new Date();d.setDate(d.getDate()+1);
+  document.getElementById('calStart').value=d.toISOString().slice(0,10);})();
+
+/* share: the whole plan rides in the URL hash */
+document.getElementById('shareBtn').onclick=async()=>{
+  const err=document.getElementById('err');err.textContent='';
+  const enc=btoa(unescape(encodeURIComponent(JSON.stringify({days:ST.days,chests:ST.chests}))))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const local=['localhost','127.0.0.1'].includes(location.hostname);
+  const url=(local?'https://gilmisgav.github.io/deck-room/':location.origin+location.pathname.replace(/[^/]*$/,''))
+    +'missions.html#s='+enc;
+  try{await navigator.clipboard.writeText(url);
+    err.innerHTML='<span class="ok">plan link copied'+(local?' (points to the online copy)':'')+'</span>';
+  }catch(e){prompt('Copy the plan link:',url);}
+};
+(function(){  // load a shared plan
+  const m=location.hash.match(/#s=([A-Za-z0-9\-_]+)/);
+  if(!m)return;
+  try{
+    const p=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))));
+    if(Array.isArray(p.days)&&(!ST.days.length||!ST.days.some(d=>(d.missions||[]).length)
+      ||confirm(`Load the shared plan (${p.days.length} days)? It replaces your current one.`))){
+      ST={days:p.days,chests:p.chests||[],active:0};save();
+    }
+    history.replaceState(null,'',location.pathname);
+  }catch(e){}
+})();
+
+/* ═══════════════ live collaboration ═══════════════
+   Shared room on jsonblob.com (public JSON store): unguessable link, no
+   password — anyone with the link sees and edits the plan. Last write wins;
+   the page polls every 4s and pushes local edits after a 1.2s debounce. */
+const LIVE={id:null,v:0,by:'',timer:null,pushT:null,busy:false,last:''};
+const LIVE_API='https://jsonblob.com/api/jsonBlob';
+function liveName(){
+  let n=null;
+  try{n=localStorage.getItem('studio_name');}catch(e){}
+  if(!n){
+    try{n=(prompt('Your name (shown to collaborators):')||'anon').slice(0,24);}
+    catch(e){n='anon';}
+    try{localStorage.setItem('studio_name',n);}catch(e){}
+  }
+  return n;
+}
+function showLink(err,msg){
+  err.innerHTML=`<span class="ok">${msg}</span>
+    <input value="${location.href}" readonly style="width:340px;font-family:var(--mono);font-size:11px"
+      onclick="this.select()"> `;
+}
+const liveEnvelope=()=>({format:'studio-live',v:LIVE.v,by:liveName(),
+  at:new Date().toISOString(),state:ST});
+function applyRemote(j){
+  LIVE.busy=true;
+  try{
+    ST=j.state;LIVE.v=j.v;LIVE.by=j.by||'';LIVE.last=JSON.stringify(ST);
+    try{localStorage.setItem(SKEY,LIVE.last);}catch(e){}
+    const se=document.getElementById('slotsN');if(se)se.value=ST.slots||3;
+    const sk=document.getElementById('stakeN');if(sk)sk.value=ST.stake||1;
+    render();
+  }finally{LIVE.busy=false;}
+}
+async function liveStart(){
+  const err=document.getElementById('err');
+  try{
+    LIVE.v=1;
+    const r=await fetch(LIVE_API,{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(liveEnvelope())});
+    const id=(r.headers.get('Location')||'').split('/').pop();
+    if(!r.ok||!id)throw new Error('HTTP '+r.status);
+    LIVE.id=id;LIVE.last=JSON.stringify(ST);
+    location.hash='room='+id;
+    liveLoop();renderLive();
+    let copied=false;
+    try{await navigator.clipboard.writeText(location.href);copied=true;}catch(e){}
+    if(copied)err.innerHTML='<span class="ok">Live room created and link copied — anyone opening it sees and edits this plan in real time.</span>';
+    else showLink(err,'Live room created — copy the link:');
+  }catch(e){LIVE.id=null;err.textContent='Could not create the live room ('+e.message+').';renderLive();}
+}
+async function liveJoin(id){
+  const err=document.getElementById('err');
+  try{
+    const r=await fetch(LIVE_API+'/'+id);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(!j||j.format!=='studio-live')throw new Error('not a studio room');
+    LIVE.id=id;
+    applyRemote(j);
+    liveLoop();renderLive();
+    err.innerHTML='<span class="ok">Joined the live room — you see everyone\'s changes and they see yours.</span>';
+  }catch(e){err.textContent='Could not join the live room ('+e.message+').';}
+}
+function liveLoop(){
+  clearInterval(LIVE.timer);
+  LIVE.timer=setInterval(async()=>{
+    if(!LIVE.id)return;
+    try{
+      const j=await(await fetch(LIVE_API+'/'+LIVE.id)).json();
+      if(j&&j.format==='studio-live'&&j.v>LIVE.v){
+        const typing=document.activeElement
+          &&/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+        if(!typing)applyRemote(j);       // don't yank the plan out from under an edit
+      }
+    }catch(e){}
+    renderLive();
+  },4000);
+}
+function livePush(){
+  if(!LIVE.id||LIVE.busy)return;
+  clearTimeout(LIVE.pushT);
+  LIVE.pushT=setTimeout(async()=>{
+    const now=JSON.stringify(ST);
+    if(now===LIVE.last)return;
+    LIVE.v++;LIVE.by=liveName();LIVE.last=now;
+    try{await fetch(LIVE_API+'/'+LIVE.id,{method:'PUT',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(liveEnvelope())});}
+    catch(e){}
+    renderLive();
+  },1200);
+}
+function liveLeave(){
+  clearInterval(LIVE.timer);LIVE.id=null;
+  history.replaceState(null,'',location.pathname);renderLive();
+}
+function renderLive(){
+  const el=document.getElementById('liveChip');if(!el)return;
+  el.innerHTML=LIVE.id
+    ?`<span style="color:var(--win)">●</span> LIVE · …${LIVE.id.slice(-6)}${LIVE.by?' · by '+LIVE.by:''}
+      <button class="x" id="liveCopy" title="copy the live link">⧉</button>
+      <button class="x" id="liveOff" title="leave the live room (the room keeps existing)">✕</button>`
+    :`<button id="liveGo" title="create a shared live room — everyone with the link sees and edits this plan. State is stored on jsonblob.com, a public JSON store: unguessable link, no password.">Go Live</button>`;
+  const g=document.getElementById('liveGo');if(g)g.onclick=liveStart;
+  const c=document.getElementById('liveCopy');if(c)c.onclick=async()=>{
+    const err=document.getElementById('err');
+    try{await navigator.clipboard.writeText(location.href);
+      err.innerHTML='<span class="ok">Live link copied.</span>';}
+    catch(e){showLink(err,'Copy the live link:');}};
+  const o=document.getElementById('liveOff');if(o)o.onclick=liveLeave;
+}
+
+/* boot */
+// the 3-day plan delivered as bundle_20260809_studio.json — the default
+// experience anyone sees before saving a plan of their own
+const DEFAULT_PLAN={
+  days:[
+    {missions:[{type:'open_same_color',target:8,tokens:5},{type:'plus3_pair',target:2,tokens:10},
+      {type:'dealer_bust',target:3,tokens:5},{type:'open_any_pair',target:1,tokens:10},
+      {type:'reach_21',target:1,tokens:10}],deckCount:3,
+      decks:['3851381817457474','2926297518384303','1468711910297569']},
+    {missions:[{type:'open_colored_pair',target:1,tokens:10},{type:'open_hard_20',target:2,tokens:10},
+      {type:'win_after_double',target:1,tokens:10},{type:'plus3_straight',target:1,tokens:10},
+      {type:'open_blackjack',target:1,tokens:10}],deckCount:3,
+      decks:['2461249552247070','4077897782262681','2595943150577021']},
+    {missions:[{type:'open_start_11',target:1,tokens:10},{type:'open_mixed_pair',target:1,tokens:10},
+      {type:'win_split_hand',target:1,tokens:20},{type:'win_5plus_cards',target:1,tokens:20},
+      {type:'dealer_bust_5plus',target:1,tokens:20}],deckCount:3,
+      decks:['2236796085956146','3676727255865741','152453125065805']}],
+  chests:[{tokens:47,cash:0.5},{tokens:94,cash:1.5},{tokens:143,cash:3}],
+  active:0,slots:3,stake:1};
+poolRates();   // warm the sample once (~1s)
+if(!ST.days.length||!ST.days.some(d=>(d.missions||[]).length)){
+  ST=JSON.parse(JSON.stringify(DEFAULT_PLAN));
+  const se=document.getElementById('slotsN');if(se)se.value=ST.slots||3;
+  const sk=document.getElementById('stakeN');if(sk)sk.value=ST.stake||1;
+}
+render();
+renderLive();
+(function(){const m=location.hash.match(/room=([A-Za-z0-9\-]+)/);if(m)liveJoin(m[1]);})();
+</script>
+</body>
+</html>
